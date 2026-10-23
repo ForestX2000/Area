@@ -23,6 +23,25 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Python (бэкенд)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Тесты
+.pytest_cache/
+.coverage
+htmlcov/
+
+
 # Сборка (если когда-нибудь будет в корне)
 dist/
 build/

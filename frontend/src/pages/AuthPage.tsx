@@ -1,6 +1,6 @@
 
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 type Mode = 'login' | 'register'
@@ -14,7 +14,7 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const { login, register, logout } = useAuth()
+  const { login, register } = useAuth()
   const navigate = useNavigate()
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

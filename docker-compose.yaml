@@ -1,6 +1,4 @@
 
-version: '3.8'
-
 services:
   # ----------------------------------------------------------
   # Фронтенд (React + Vite, статика через nginx)
@@ -20,25 +18,19 @@ services:
     restart: unless-stopped
 
   # ----------------------------------------------------------
-  # Бэкенд (FastAPI) — ЗАГЛУШКА
+  # Бэкенд (FastAPI)
   # ----------------------------------------------------------
-  # Реальный бэкенд ещё не добавлен в репозиторий.
-  # Когда папка ./backend появится, раскомментируйте блок ниже,
-  # укажите корректный build/context и команду запуска uvicorn.
-  #
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - ./backend:/app
-  #     - project-data:/app/data
-  #   environment:
-  #     - PROJECTS_DIR=/app/data/projects
-  #     - MEDIA_DIR=/app/data/media
-  #   restart: unless-stopped
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=Area API
+      - APP_VERSION=0.1.0
+      - DEBUG=true
+    restart: unless-stopped
 
 volumes:
   project-data:

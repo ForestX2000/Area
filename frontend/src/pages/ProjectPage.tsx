@@ -120,6 +120,13 @@ export default function ProjectPage() {
               >
                 Открыть карту
               </Link>
+
+              <Link
+                to={`/projects/${project.id}/editor`}
+                className="inline-flex rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                ✏️ Редактор чертежа
+              </Link>
             </div>
           </>
         ) : (

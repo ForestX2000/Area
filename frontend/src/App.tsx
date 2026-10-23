@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectPage from './pages/ProjectPage'
 import ProjectMapPage from './pages/ProjectMapPage'
+import EditorPage from './pages/EditorPage'
 import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 
@@ -39,6 +40,7 @@ export default function App() {
             </>
           }
         />
+        <Route path="/projects/:projectId/editor" element={<EditorPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

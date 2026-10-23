@@ -1,0 +1,9 @@
+# Список зависимостей, необходимых для работы бекенда
+fastapi
+uvicorn[standard]
+pytest
+httpx
+sqlalchemy
+psycopg[binary]
+alembic
+python-dotenvwinget install PostgreSQL.PostgreSQL.18 --interactive

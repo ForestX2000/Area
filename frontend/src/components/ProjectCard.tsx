@@ -25,7 +25,7 @@ function ProjectCard({
 
       <div className="project-info">
         <h3>{name}</h3>
-        <p>{description}</p>
+        <p className="line-clamp-2">{description || 'Описание не добавлено'}</p>
 
         <div className="project-meta">
           <span>Зданий: {buildingsCount}</span>

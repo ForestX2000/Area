@@ -1,5 +1,6 @@
 
 import { NavLink, Outlet } from 'react-router-dom'
+import Header from '../components/Header'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
@@ -42,20 +43,7 @@ export default function MainLayout() {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-4 sm:px-8">
-          <div>
-            <p className="text-sm text-slate-500">
-              Рабочая область
-            </p>
-            <p className="font-semibold text-slate-900">
-              Мои пространства
-            </p>
-          </div>
-
-          <div className="grid size-10 place-items-center rounded-full bg-indigo-100 font-semibold text-indigo-700">
-            Т
-          </div>
-        </header>
+        <Header />
 
         <main className="p-4 sm:p-6 lg:p-8">
           <Outlet />

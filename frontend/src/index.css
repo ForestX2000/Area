@@ -1,5 +1,6 @@
 
 @import "tailwindcss";
+@import "./App.css";
 
 :root {
   font-family: Inter, system-ui, Arial, sans-serif;

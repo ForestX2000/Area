@@ -1,0 +1,44 @@
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------
+  # Фронтенд (React + Vite, статика через nginx)
+  # ----------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000/api
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Бэкенд (FastAPI) — ЗАГЛУШКА
+  # ----------------------------------------------------------
+  # Реальный бэкенд ещё не добавлен в репозиторий.
+  # Когда папка ./backend появится, раскомментируйте блок ниже,
+  # укажите корректный build/context и команду запуска uvicorn.
+  #
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - ./backend:/app
+  #     - project-data:/app/data
+  #   environment:
+  #     - PROJECTS_DIR=/app/data/projects
+  #     - MEDIA_DIR=/app/data/media
+  #   restart: unless-stopped
+
+volumes:
+  project-data:

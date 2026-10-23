@@ -4,6 +4,8 @@ import MainLayout from './layouts/MainLayout'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectPage from './pages/ProjectPage'
 import ProjectMapPage from './pages/ProjectMapPage'
+import AuthPage from './pages/AuthPage'
+import ProfilePage from './pages/ProfilePage'
 
 function NewProjectPage() {
   return (
@@ -22,13 +24,20 @@ export default function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<ProjectsPage />} />
         <Route path="/projects/new" element={<NewProjectPage />} />
-        <Route
-          path="/projects/:projectId"
-          element={<ProjectPage />}
-        />
+        <Route path="/projects/:projectId" element={<ProjectPage />} />
         <Route
           path="/projects/:projectId/map"
           element={<ProjectMapPage />}
+        />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route
+          path="/profile"
+          element={
+            <>
+              {/* Профиль доступен только после входа; в реальном API — валидация токена на бэкенде. */}
+              <ProfilePage />
+            </>
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

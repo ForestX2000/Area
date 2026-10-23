@@ -100,7 +100,7 @@ export default function EditorToolbar({
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
-            onClick={() => onZoomChange((z) => Math.max(0.25, z - 0.25))}
+            onClick={() => onZoomChange(Math.max(0.25, zoom - 0.25))}
             className="p-1.5 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition"
           >
             −
@@ -110,7 +110,7 @@ export default function EditorToolbar({
           </span>
           <button
             type="button"
-            onClick={() => onZoomChange((z) => Math.min(4, z + 0.25))}
+            onClick={() => onZoomChange(Math.min(4, zoom + 0.25))}
             className="p-1.5 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition"
           >
             +

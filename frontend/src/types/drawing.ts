@@ -16,6 +16,8 @@ export interface DrawingObject {
   label?: string
   width?: number
   height?: number
+  strokeDasharray?: string
+  isSquare?: boolean
   [key: string]: unknown
 }
 

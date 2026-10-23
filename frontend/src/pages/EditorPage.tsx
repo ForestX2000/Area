@@ -6,7 +6,6 @@ import EditorToolbar from '../components/editor/EditorToolbar'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
 import type { DrawingObject, DrawingTool } from '../types/drawing'
 import { getProjects, saveProjects } from '../utils/projectStorage'
-import type { Project } from '../types/project'
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()

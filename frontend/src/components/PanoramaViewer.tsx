@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import 'pannellum/build/pannellum.css'
+import EditorNavigation from './editor/EditorNavigation'
 
 interface PanoramaViewerProps {
   imageUrl: string
@@ -8,9 +9,10 @@ interface PanoramaViewerProps {
   panoramas: { id: string; title: string }[]
   onSelectPanorama: (id: string) => void
   onClose: () => void
+  projectId: string
 }
 
-export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, onSelectPanorama, onClose }: PanoramaViewerProps) {
+export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, onSelectPanorama, onClose, projectId }: PanoramaViewerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<PannellumViewer | null>(null)
@@ -99,6 +101,7 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
       onCancel={(event) => { event.preventDefault(); onClose() }}
       className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-page p-0 text-body">
       <div className="flex h-full flex-col">
+        <EditorNavigation projectId={projectId} mode="3d" can3D onModeChange={onClose} onBack={onClose} />
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-4 py-3">
           <div className="min-w-0">
             <p className="text-xs font-medium text-brand">3D · Панорама 360°</p>
@@ -111,7 +114,6 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
                 {panoramas.map((point) => <option key={point.id} value={point.id}>{point.title}</option>)}
               </select>
             )}
-            <button type="button" onClick={onClose} className={buttonClass}>К 2D-карте</button>
           </div>
         </header>
 

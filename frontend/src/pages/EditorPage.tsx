@@ -1,9 +1,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import CanvasEditor from '../components/editor/CanvasEditor'
 import EditorToolbar from '../components/editor/EditorToolbar'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
+import EditorNavigation from '../components/editor/EditorNavigation'
+import { addVertex, canAddVertex, canDeleteVertex, deleteVertex, objectBounds, objectName, scaleDrawing } from '../components/editor/drawingGeometry'
 import type { DrawingObject, DrawingTool } from '../types/drawing'
 import { getProjects, saveProjects } from '../utils/projectStorage'
 
@@ -13,6 +15,7 @@ export default function EditorPage() {
 }
 
 function ProjectEditor({ projectId }: { projectId?: string }) {
+  const navigate = useNavigate()
   const [history, setHistory] = useState<{ objects: DrawingObject[]; past: DrawingObject[][]; future: DrawingObject[][] }>(() => ({
     objects: getProjects().find((project) => project.id === projectId)?.drawings ?? [], past: [], future: [],
   }))
@@ -23,6 +26,8 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
   const [gridSize, setGridSize] = useState(0.5)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [zoom, setZoom] = useState(1)
+  const [selectedVertex, setSelectedVertex] = useState<number | null>(null)
+  const [showServiceMarks, setShowServiceMarks] = useState(false)
 
   const project = projectId
     ? getProjects().find((p) => p.id === projectId)
@@ -51,6 +56,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
       return objects ? { objects, past: previous.past.slice(0, -1), future: [...previous.future, previous.objects] } : previous
     })
     setSelectedIds([])
+    setSelectedVertex(null)
   }, [])
 
   const handleRedo = useCallback(() => {
@@ -59,13 +65,21 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
       return objects ? { objects, past: [...previous.past.slice(-99), previous.objects], future: previous.future.slice(0, -1) } : previous
     })
     setSelectedIds([])
+    setSelectedVertex(null)
   }, [])
 
   const handleDelete = useCallback(() => {
     if (selectedIds.length === 0) return
+    if (tool === 'vertices' && selectedVertex !== null && selected) {
+      if (canDeleteVertex(selected)) {
+        handleObjectsChange(objects.map((object) => object.id === selected.id ? deleteVertex(object, selectedVertex) : object))
+        setSelectedVertex(null)
+      }
+      return
+    }
     setSelectedIds([])
     handleObjectsChange(objects.filter((object) => !selectedIds.includes(object.id)))
-  }, [selectedIds, objects, handleObjectsChange])
+  }, [selectedIds, objects, handleObjectsChange, selectedVertex, tool, selected])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -95,6 +109,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
   const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
     setSelectedIds(ids)
     if (activateSelectionTool) setTool('select')
+    setSelectedVertex(null)
   }, [])
 
   const handleUpdate = useCallback(
@@ -102,18 +117,13 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
       if (!selectedId) return
       handleObjectsChange(objects.map((object) => {
         if (object.id !== selectedId) return object
-        const next = { ...object, ...updates }
+        let next = { ...object, ...updates }
         if (updates.width !== undefined || updates.height !== undefined) {
-          const [a, b] = object.points
-          let width = updates.width ?? Math.abs(b.x - a.x)
-          let height = updates.height ?? Math.abs(b.y - a.y)
+          const box = objectBounds(object)
+          let width = updates.width ?? box.width
+          let height = updates.height ?? box.height
           if (object.isSquare) width = height = updates.width ?? updates.height ?? width
-          next.points = [a, {
-            x: a.x + (b.x < a.x ? -width : width),
-            y: a.y + (b.y < a.y ? -height : height),
-          }]
-          next.width = width
-          next.height = height
+          next = scaleDrawing(next, width, height)
         }
         return next
       }))
@@ -121,7 +131,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     [selectedId, objects, handleObjectsChange]
   )
 
-  if (!projectId) {
+  if (!projectId || !project) {
     return (
       <div className="min-h-screen bg-surface-muted flex items-center justify-center">
         <div className="text-center">
@@ -142,12 +152,46 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
 
   return (
     <div className="bg-surface-muted">
-      <div className="flex flex-col md:flex-row md:h-[calc(100dvh-10rem)] min-h-[32rem] overflow-hidden rounded-xl border border-line">
-        {/*Toolbar — только слева, кнопки на канвасе убраны*/}
-        <aside className="flex flex-col md:w-56 shrink-0 overflow-y-auto">
+      <EditorNavigation projectId={projectId} />
+      <div className="grid overflow-hidden rounded-b-xl border border-line md:h-[calc(100dvh-12rem)] md:min-h-[38rem] md:grid-cols-[240px_minmax(0,1fr)_240px]">
+        <aside aria-label="Свойства и объекты" className="order-2 overflow-y-auto border-r border-line bg-white md:order-1">
+          <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
+            selectedVertex={selectedVertex} onEditVertices={() => setTool('vertices')}
+            onAddVertex={() => {
+              if (!selected || !canAddVertex(selected)) return
+              const added = addVertex(selected)
+              handleObjectsChange(objects.map((object) => object.id === selected.id ? added.object : object))
+              setTool('vertices'); setSelectedVertex(added.index)
+            }}
+            onDeleteVertex={() => {
+              if (!selected || selectedVertex === null || !canDeleteVertex(selected)) return
+              handleObjectsChange(objects.map((object) => object.id === selected.id ? deleteVertex(object, selectedVertex) : object))
+              setSelectedVertex(null)
+            }} />
+          <section aria-label="Список объектов" className="border-t border-line p-3">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Все объекты</h2>
+            <ul className="space-y-1">{objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object, index) => <li key={object.id}>
+              <button type="button" aria-pressed={selectedIds.includes(object.id)}
+                onClick={(event) => {
+                  const ids = event.shiftKey || event.ctrlKey ? selectedIds.includes(object.id) ? selectedIds.filter((id) => id !== object.id) : [...selectedIds, object.id] : [object.id]
+                  handleSelect(ids); if (tool !== 'vertices') setTool('select')
+                }} className={`w-full truncate rounded-lg px-3 py-2 text-left text-xs ${selectedIds.includes(object.id) ? 'bg-brand-soft text-brand' : 'hover:bg-surface-muted'}`}>
+                {object.label || `${objectName(object)} ${index + 1}`}
+              </button>
+            </li>)}</ul>
+            {objects.length === 0 && <p className="text-xs text-muted">Пока нет объектов</p>}
+          </section>
+        </aside>
+        <div className="order-1 h-96 min-w-0 md:order-2 md:h-full">
+          <CanvasEditor objects={objects} onObjectsChange={handleObjectsChange} selectedIds={selectedIds} onSelect={handleSelect}
+            tool={tool} gridSize={gridSize} snapToGrid={snapToGrid} zoom={zoom} onZoomChange={setZoom}
+            selectedVertex={selectedVertex} onVertexSelect={setSelectedVertex} showServiceMarks={showServiceMarks}
+            onActivateMarker={(object) => { if (object.markerKind === 'navigation' && object.targetProjectId) navigate(`/projects/${object.targetProjectId}/map`) }} />
+        </div>
+        <aside aria-label="Панель инструментов" className="order-3 overflow-y-auto border-l border-line">
           <EditorToolbar
             tool={tool}
-            onToolChange={(next) => { setTool(next); setSelectedIds([]) }}
+            onToolChange={(next) => { setTool(next); if (next !== 'vertices') setSelectedIds([]); setSelectedVertex(null) }}
             gridSize={gridSize}
             onGridSizeChange={setGridSize}
             snapToGrid={snapToGrid}
@@ -158,53 +202,11 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
             onUndo={handleUndo}
             canRedo={history.future.length > 0}
             onRedo={handleRedo}
+            showServiceMarks={showServiceMarks}
+            onServiceToggle={() => { setShowServiceMarks((value) => !value); setSelectedIds([]); setSelectedVertex(null); setTool('select') }}
           />
         </aside>
 
-        {/*Canvas — только область рисования*/}
-        <div className="flex-1 min-w-0 min-h-96 relative flex flex-col">
-          <div className="shrink-0 border-b border-line bg-white p-3 flex flex-wrap items-center gap-3">
-            <Link
-              to={`/projects/${projectId}`}
-              className="flex items-center gap-2 text-sm font-medium text-muted hover:text-brand transition"
-            >
-              ← Назад к проекту
-            </Link>
-            <span className="w-px h-5 bg-line-strong" />
-            <span className="text-sm font-medium text-ink">
-              Редактор: {project?.name ?? 'Проект'}
-            </span>
-            <Link to={`/projects/${projectId}/map?mode=2d`}
-              className="ml-auto rounded-lg border border-line px-3 py-2 text-sm text-body hover:bg-brand-soft hover:text-brand">
-              2D-карта и панорамы
-            </Link>
-            <Link to="/workspace" className="rounded-lg border border-line px-3 py-2 text-sm text-body hover:bg-brand-soft hover:text-brand">2D Workspace</Link>
-          </div>
-
-          <div className="h-96 md:h-auto md:flex-1 min-h-0">
-            <CanvasEditor
-              objects={objects}
-              onObjectsChange={handleObjectsChange}
-              selectedIds={selectedIds}
-              onSelect={handleSelect}
-              tool={tool}
-              gridSize={gridSize}
-              snapToGrid={snapToGrid}
-              zoom={zoom}
-              onZoomChange={setZoom}
-            />
-          </div>
-        </div>
-
-        {/*Properties*/}
-        <aside className="md:w-64 shrink-0 overflow-y-auto border-l border-line bg-white">
-          <PropertiesPanel
-            selected={selected}
-            selectionCount={selectedIds.length}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-          />
-        </aside>
       </div>
     </div>
   )

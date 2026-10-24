@@ -1,5 +1,7 @@
 
-export type DrawingTool = 'select' | 'line' | 'rectangle' | 'dimension'
+export type ShapeType = 'line' | 'rectangle' | 'dimension' | 'ellipse' | 'polygon' | 'polyline'
+export type MarkerKind = 'info' | 'navigation' | 'status' | 'service'
+export type DrawingTool = 'select' | 'vertices' | ShapeType | 'triangle' | 'diamond' | 'pentagon' | 'hexagon' | 'star' | 'arrow' | `marker-${MarkerKind}`
 
 export interface Point {
   x: number
@@ -8,7 +10,12 @@ export interface Point {
 
 export interface DrawingObject {
   id: string
-  type: 'line' | 'rectangle' | 'dimension'
+  type: ShapeType | 'marker'
+  shapeKind?: DrawingTool
+  markerKind?: MarkerKind
+  description?: string
+  targetProjectId?: string
+  status?: 'ready' | 'progress' | 'blocked'
   points: Point[]
   strokeWidth?: number
   stroke?: string

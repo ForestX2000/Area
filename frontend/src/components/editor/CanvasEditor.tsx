@@ -1,7 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
-import { createDrawing, intersectsSelection, MAX_ZOOM, MIN_ZOOM, PIXELS_PER_METRE, pointToSegmentDistance, resizeDrawing, resizeHandles } from './drawingGeometry'
+import { addVertex, canAddVertex, createDrawing, hitObject, intersectsSelection, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, vertices } from './drawingGeometry'
+import DrawingShape from './DrawingShape'
 
 interface CanvasEditorProps {
   objects: DrawingObject[]
@@ -13,6 +14,10 @@ interface CanvasEditorProps {
   snapToGrid: boolean
   zoom: number
   onZoomChange: (zoom: number) => void
+  selectedVertex?: number | null
+  onVertexSelect?: (index: number | null) => void
+  showServiceMarks?: boolean
+  onActivateMarker?: (object: DrawingObject) => void
 }
 
 type Gesture =
@@ -20,6 +25,7 @@ type Gesture =
   | { kind: 'draw'; pointerId: number; start: Point; tool: DrawingTool }
   | { kind: 'move'; pointerId: number; start: Point; original: DrawingObject; originals: DrawingObject[] }
   | { kind: 'resize'; pointerId: number; start: Point; original: DrawingObject; handle: number }
+  | { kind: 'vertex'; pointerId: number; start: Point; original: DrawingObject; handle: number }
   | { kind: 'marquee'; pointerId: number; start: Point; previousSelection: string[] }
 
 interface ClickPoint {
@@ -32,7 +38,7 @@ interface ClickPoint {
 const formatMetres = (value: number) => (value / PIXELS_PER_METRE).toFixed(2)
 
 export default function CanvasEditor({ objects, onObjectsChange, selectedIds, onSelect,
-  tool, gridSize, snapToGrid, zoom, onZoomChange }: CanvasEditorProps) {
+  tool, gridSize, snapToGrid, zoom, onZoomChange, selectedVertex, onVertexSelect, showServiceMarks = false, onActivateMarker }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const contentRef = useRef<SVGGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
@@ -48,6 +54,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   const cellSize = Math.max(0.1, gridSize) * PIXELS_PER_METRE
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
   const draftsById = new Map(drafts.map((draft) => [draft.id, draft]))
+  const visibleObjects = objects.filter((object) => object.markerKind !== 'service' || showServiceMarks)
 
   useLayoutEffect(() => { viewportRef.current.zoom = zoom }, [zoom])
   useEffect(() => { lastClickRef.current = null }, [tool])
@@ -104,11 +111,9 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     let nearest: Point | null = null
     let distance = 14 / zoom
     if (shiftKey) {
-      for (const object of objects) {
+      for (const object of visibleObjects) {
         if (excludedIds.includes(object.id)) continue
-        const [a, b] = object.points
-        const corners = object.type === 'rectangle'
-          ? [a, b, { x: a.x, y: b.y }, { x: b.x, y: a.y }] : [a, b]
+        const corners = object.type === 'marker' ? object.points : object.type === 'ellipse' ? resizeHandles(object) : vertices(object)
         for (const corner of corners) {
           const d = Math.hypot(corner.x - point.x, corner.y - point.y)
           if (d < distance) { nearest = corner; distance = d }
@@ -124,12 +129,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
 
   function findObject(point: Point) {
     const tolerance = 8 / zoom
-    return objects.toReversed().find((object) => {
-      const [a, b] = object.points
-      if (object.type !== 'rectangle') return pointToSegmentDistance(point, a, b) <= tolerance
-      return point.x >= Math.min(a.x, b.x) - tolerance && point.x <= Math.max(a.x, b.x) + tolerance
-        && point.y >= Math.min(a.y, b.y) - tolerance && point.y <= Math.max(a.y, b.y) + tolerance
-    })
+    return visibleObjects.toReversed().find((object) => hitObject(object, point, tolerance))
   }
 
   function handlePointerDown(event: PointerEvent<SVGSVGElement>) {
@@ -146,6 +146,16 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       return
     }
     const point = svgPoint(event)
+    const vertexHandle = (event.target as Element).closest('[data-vertex-handle]')
+    const vertexObject = vertexHandle ? objects.find((object) => object.id === selectedId) : undefined
+    if (vertexHandle && vertexObject) {
+      const handle = Number(vertexHandle.getAttribute('data-vertex-handle'))
+      onVertexSelect?.(handle)
+      lastClickRef.current = null
+      gestureRef.current = { kind: 'vertex', pointerId: event.pointerId, start: point, original: vertexObject, handle }
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     const previousClick = lastClickRef.current
     lastClickRef.current = null
     const doublePress = event.pointerType === 'mouse' && previousClick
@@ -153,7 +163,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       && Math.hypot(event.clientX - previousClick.x, event.clientY - previousClick.y) <= 5
     clickCandidateRef.current = event.pointerType === 'mouse' && !doublePress
       ? { x: event.clientX, y: event.clientY, time: event.timeStamp, selection: selectedIds, pointerId: event.pointerId } : null
-    if (doublePress) {
+    if (doublePress && tool !== 'vertices') {
       gestureRef.current = { kind: 'marquee', pointerId: event.pointerId, start: point, previousSelection: previousClick.selection }
       onSelect(selectedIds, true)
       setSelectionBox({ start: point, end: point })
@@ -167,6 +177,12 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         original: resized, handle: Number(handle.getAttribute('data-resize-handle')) }
       setDrafts([resized])
       event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
+    if (tool === 'vertices') {
+      const object = findObject(point)
+      onSelect(object ? [object.id] : [])
+      onVertexSelect?.(null)
       return
     }
     const original = tool === 'select' ? findObject(point) : undefined
@@ -196,6 +212,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     if (gesture.kind === 'resize') {
       return [resizeDrawing(original, gesture.handle, resolvePoint(raw, event.shiftKey, [original.id]))]
     }
+    if (gesture.kind === 'vertex') return [moveVertex(original, gesture.handle, resolvePoint(raw, event.shiftKey, [original.id]))]
     const anchor = original.points[0]
     const target = resolvePoint({ x: anchor.x + raw.x - gesture.start.x,
       y: anchor.y + raw.y - gesture.start.y }, event.shiftKey, gesture.originals.map((object) => object.id))
@@ -210,7 +227,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     const end = svgPoint(event)
     setSelectionBox({ start: gesture.start, end })
     if (Math.hypot(end.x - gesture.start.x, end.y - gesture.start.y) > 3 / zoom) {
-      onSelect(objects.filter((object) => intersectsSelection(object, gesture.start, end)).map((object) => object.id))
+      onSelect(visibleObjects.filter((object) => intersectsSelection(object, gesture.start, end)).map((object) => object.id))
     }
   }
 
@@ -261,10 +278,9 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     const next = updateGesture(event)
     if (next) {
       const [object] = next
-      const [a, b] = object.points
-      const valid = object.type === 'rectangle' ? Math.abs(a.x - b.x) > 0.01 && Math.abs(a.y - b.y) > 0.01
-        : Math.hypot(a.x - b.x, a.y - b.y) > 0.01
-      if (gesture.kind === 'move' || (gesture.kind === 'resize' && valid)) {
+      const box = objectBounds(object)
+      const valid = object.type === 'marker' || (['rectangle', 'ellipse', 'polygon'].includes(object.type) ? box.width > 0.01 && box.height > 0.01 : Math.hypot(box.width, box.height) > 0.01)
+      if (gesture.kind === 'move' || ((gesture.kind === 'resize' || gesture.kind === 'vertex') && valid)) {
         const replacements = new Map(next.map((object) => [object.id, object]))
         onObjectsChange(objects.map((object) => replacements.get(object.id) ?? object))
       } else if (gesture.kind === 'draw' && valid) {
@@ -280,25 +296,21 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   function renderObject(object: DrawingObject, preview = false) {
     const [a, b] = object.points
     const selected = selectedIds.includes(object.id) && !preview
-    const showHandles = selected && selectedIds.length === 1
-    const width = Math.abs(b.x - a.x)
-    const height = Math.abs(b.y - a.y)
-    const label = object.type === 'rectangle' ? `${formatMetres(width)} × ${formatMetres(height)} м`
+    const showHandles = selected && selectedIds.length === 1 && tool !== 'vertices'
+    const editingVertices = selected && tool === 'vertices'
+    const box = objectBounds(object)
+    const width = box.width
+    const height = box.height
+    const label = ['rectangle', 'ellipse', 'polygon'].includes(object.type) ? `${formatMetres(width)} × ${formatMetres(height)} м`
       : `${formatMetres(Math.hypot(width, height))} м`
     return (
       <g key={object.id} data-object-id={preview ? undefined : object.id} data-object-type={object.type}
         data-preview={preview || undefined} data-selected={selected || undefined} pointerEvents={preview ? 'none' : undefined}>
-        {object.type === 'rectangle' ? (
-          <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={width} height={height}
-            fill={object.fill ?? 'transparent'} stroke={selected ? 'var(--ttk-red)' : object.stroke ?? 'var(--ttk-graphite)'}
-            strokeWidth={object.strokeWidth ?? 2} strokeDasharray={preview ? '4 4' : object.strokeDasharray}
-            vectorEffect="non-scaling-stroke" />
-        ) : (
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-            stroke={selected ? 'var(--ttk-red)' : object.stroke ?? 'var(--ttk-graphite)'} strokeWidth={object.strokeWidth ?? 2}
-            strokeDasharray={preview ? '4 4' : object.strokeDasharray} vectorEffect="non-scaling-stroke" />
-        )}
-        {(showHandles || object.type === 'dimension') && (showHandles ? resizeHandles(object) : [a, b]).map((point, index) => (
+        <DrawingShape object={object} stroke={selected ? 'var(--ttk-red)' : undefined} preview={preview} />
+        {editingVertices && vertices(object).map((point, index) => <circle key={index} data-vertex-handle={index}
+          cx={point.x} cy={point.y} r={6 / zoom} fill={selectedVertex === index ? 'var(--ttk-red)' : 'white'}
+          stroke="var(--ttk-red)" strokeWidth={2 / zoom} style={{ cursor: 'move' }} />)}
+        {(showHandles || (object.type === 'dimension' && !editingVertices)) && (showHandles ? resizeHandles(object) : [a, b]).map((point, index) => (
           <circle key={index} cx={point.x} cy={point.y} r={(showHandles ? 6 : 4) / zoom}
             data-resize-handle={showHandles ? index : undefined}
             style={showHandles ? { cursor: object.type !== 'rectangle' ? 'move' : index % 2 === 0 ? 'nwse-resize' : 'nesw-resize' } : undefined}
@@ -307,7 +319,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         {(selected || preview || object.type === 'dimension' || object.label) && (
           <text x={(a.x + b.x) / 2} y={Math.min(a.y, b.y) - 10 / zoom} fontSize={12 / zoom}
             fill="var(--ttk-body)" textAnchor="middle" pointerEvents="none">
-            {object.label ? `${object.label} · ` : ''}{label}
+            {object.type === 'marker' ? object.label : <>{object.label ? `${object.label} · ` : ''}{label}</>}
           </text>
         )}
       </g>
@@ -319,6 +331,15 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       <svg ref={svgRef} aria-label="Холст чертежа" role="application" tabIndex={0}
         className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
+        onDoubleClick={(event) => {
+          const point = svgPoint(event as unknown as PointerEvent<SVGSVGElement>)
+          const object = objects.find((item) => item.id === selectedId)
+          if (tool === 'vertices' && object && canAddVertex(object) && !(event.target as Element).closest('[data-vertex-handle]')) {
+            const added = addVertex(object, point)
+            onObjectsChange(objects.map((item) => item.id === object.id ? added.object : item))
+            onVertexSelect?.(added.index)
+          } else if (object?.type === 'marker') onActivateMarker?.(object)
+        }}
         onAuxClick={(event) => { if (event.button === 1) event.preventDefault() }}
         onKeyDown={(event) => {
           if (gestureRef.current && (event.ctrlKey || event.metaKey)
@@ -350,7 +371,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         <rect width="100%" height="100%" fill={`url(#${patternId}-minor)`} />
         <rect width="100%" height="100%" fill={`url(#${patternId}-major)`} />
         <g ref={contentRef} data-canvas-content transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
-          {objects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
+          {visibleObjects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
           {drafts.filter((draft) => draft.id === 'preview').map((draft) => renderObject(draft, true))}
           {selectionBox && <rect data-selection-box
             x={Math.min(selectionBox.start.x, selectionBox.end.x)} y={Math.min(selectionBox.start.y, selectionBox.end.y)}

@@ -19,6 +19,7 @@ export interface Workspace extends WorkspaceContent {
   id: string
   name: string
   view: { x: number; y: number; zoom: number }
+  description?: string
 }
 
 export interface WorkspaceCollection {

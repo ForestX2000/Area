@@ -5,8 +5,10 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import PanoramaViewer from "../components/PanoramaViewer";
 import DrawingPlan from "../components/DrawingPlan";
+import EditorNavigation from "../components/editor/EditorNavigation";
 import { getProjects } from "../utils/projectStorage";
 import { useObjectUrl } from "../utils/useObjectUrl";
+import type { DrawingObject } from '../types/drawing';
 import type {
   MapPoint,
   MapPointCategory,
@@ -60,7 +62,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
   const [searchParams] = useSearchParams();
   const [openIn2D] = useState(() => searchParams.get("mode") === "2d");
   const [drawings] = useState(() => (getProjects().find((project) => project.id === projectId)?.drawings ?? [])
-    .filter((object) => object.points?.length >= 2 && object.points.slice(0, 2)
+    .filter((object) => object.markerKind !== 'service' && object.points?.length >= 2 && object.points
       .every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))));
   const [imageUrl, replaceImage] = useObjectUrl();
   const [imageName, setImageName] = useState("");
@@ -76,6 +78,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
   const [panoramaName, setPanoramaName] = useState("");
   const [panoramaLoading, setPanoramaLoading] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [activeDrawingMarker, setActiveDrawingMarker] = useState<DrawingObject | null>(null);
   const [panoramaIds, setPanoramaIds] = useState<string[]>([]);
   const requestedPanorama = useRef<string | null>(null);
   const hasPlan = !!imageUrl || drawings.length > 0;
@@ -454,6 +457,8 @@ function ProjectMap({ projectId }: { projectId?: string }) {
 
   return (
     <div className="text-body">
+      <EditorNavigation projectId={projectId!} can3D={panoramaIds.length > 0 && !panoramaLoading}
+        onModeChange={() => openPanorama(selectedPointId && panoramaIds.includes(selectedPointId) ? selectedPointId : panoramaIds[0])} />
       <header className="mb-7">
         <Link
           to="/"
@@ -496,20 +501,11 @@ function ProjectMap({ projectId }: { projectId?: string }) {
             />
           </label>
         </div>
-        <nav aria-label="Режим карты" className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="button" aria-pressed={!viewerOpen}
-            className="rounded-lg border border-brand-border bg-brand-soft px-4 py-2 text-brand"
-            onClick={() => setViewerOpen(false)}>2D · Карта</button>
-          <button type="button" disabled={panoramaIds.length === 0 || panoramaLoading}
-            className="rounded-lg border border-line bg-white px-4 py-2 text-body enabled:hover:bg-brand-soft disabled:opacity-40"
-            onClick={() => openPanorama(selectedPointId && panoramaIds.includes(selectedPointId) ? selectedPointId : panoramaIds[0])}>
-            3D · Панорама
-          </button>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link to={`/projects/${projectId}/editor`}
             className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">Редактировать чертёж</Link>
-          <Link to="/workspace" className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">2D Workspace</Link>
           {panoramaIds.length === 0 && <span className="text-xs text-muted">Добавьте точку на карте и загрузите для неё панораму 360°.</span>}
-        </nav>
+        </div>
       </header>
 
       {error && (
@@ -537,9 +533,9 @@ function ProjectMap({ projectId }: { projectId?: string }) {
         </div>
       )}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         {/* Рабочая область карты */}
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white shadow-sm xl:order-2">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-xl text-brand">
@@ -587,7 +583,10 @@ function ProjectMap({ projectId }: { projectId?: string }) {
                   {imageUrl ? (
                     <img src={imageUrl} alt="План помещения" className="block h-auto w-full select-none" draggable={false} />
                   ) : (
-                    <DrawingPlan objects={drawings} label="План помещения" />
+                    <DrawingPlan objects={drawings} label="План помещения" onMarkerActivate={(object) => {
+                      if (object.markerKind === 'navigation' && object.targetProjectId) navigate(`/projects/${object.targetProjectId}/map`);
+                      else setActiveDrawingMarker(object);
+                    }} />
                   )}
 
                   {points.map((point, index) => {
@@ -661,8 +660,14 @@ function ProjectMap({ projectId }: { projectId?: string }) {
         </section>
 
         {/* Список объектов и редактор */}
-        <aside className="min-w-0 space-y-5">
-          <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+        <aside className="flex min-w-0 flex-col gap-5 xl:order-1">
+          {activeDrawingMarker && <section className="order-first rounded-2xl border border-brand-border bg-white p-5">
+            <h2 className="font-semibold text-ink">{activeDrawingMarker.label || 'Метка'}</h2>
+            <p className="mt-2 whitespace-pre-line text-sm text-muted">{activeDrawingMarker.description || 'Описание не добавлено.'}</p>
+            {activeDrawingMarker.markerKind === 'status' && <p className="mt-2 text-sm">Статус: {activeDrawingMarker.status === 'blocked' ? 'Недоступно' : activeDrawingMarker.status === 'progress' ? 'В работе' : 'Готово'}</p>}
+            <button type="button" onClick={() => setActiveDrawingMarker(null)} className="mt-3 text-sm text-brand">Закрыть метку</button>
+          </section>}
+          <section className="order-2 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
             <div className="border-b border-line-soft px-5 py-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -929,6 +934,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
           key={panoramaUrl}
           imageUrl={panoramaUrl}
           title={selectedPoint.title}
+          projectId={projectId!}
           pointId={selectedPoint.id}
           panoramas={points.filter((point) => panoramaIds.includes(point.id))}
           onSelectPanorama={openPanorama}

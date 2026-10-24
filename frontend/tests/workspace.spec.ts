@@ -11,6 +11,13 @@ async function stored(page: Page): Promise<WorkspaceCollection> {
   return page.evaluate(() => JSON.parse(localStorage.getItem('space-map-workspaces')!))
 }
 
+async function createFromProjects(page: Page, name: string) {
+  await page.goto('/?create=workspace')
+  await page.getByLabel('Название проекта', { exact: true }).fill(name)
+  await page.getByRole('button', { name: 'Создать Workspace', exact: true }).click()
+  await page.getByRole('article').filter({ has: page.getByRole('heading', { name, exact: true }) }).getByRole('link', { name: 'Открыть Workspace' }).click()
+}
+
 async function positions(page: Page) {
   return surface(page).locator('[data-project-id]').evaluateAll((nodes) => nodes.map((node) => ({
     id: node.getAttribute('data-project-id'), x: parseFloat((node as HTMLElement).style.left), y: parseFloat((node as HTMLElement).style.top),
@@ -40,6 +47,9 @@ test.beforeEach(async ({ page }) => {
         ] },
         { id: 'c', name: 'Склад', description: '', createdAt: '2026-10-24' },
       ]))
+      localStorage.setItem('space-map-workspaces', JSON.stringify({ version: 1, activeId: 'main', workspaces: [{
+        id: 'main', name: 'Основной Workspace', nodes: ['a', 'b', 'c'].map((projectId, index) => ({ projectId, x: 40 + index * 320, y: 80 })), groups: [], view: { x: 0, y: 0, zoom: 1 },
+      }] }))
     }
   })
   await page.goto('/workspace')
@@ -93,10 +103,7 @@ test('several workspaces have independent membership, groups and placement', asy
   await choose(page, 'Корпус Б').check()
   await page.getByRole('button', { name: 'Объединить', exact: true }).click()
   const initial = (await stored(page)).activeId
-  await page.getByRole('button', { name: '+ Новый Workspace', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Новый Workspace' })
-  await dialog.getByRole('textbox', { name: 'Название Workspace', exact: true }).fill('Второй этаж')
-  await dialog.getByRole('button', { name: 'Создать Workspace', exact: true }).click()
+  await createFromProjects(page, 'Второй этаж')
   await expect(surface(page).locator('[data-project-id]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Добавить карту: Корпус А', exact: true }).click()
   await expect(surface(page).locator('[data-project-id]')).toHaveCount(1)
@@ -229,8 +236,7 @@ test('dragging the container header moves all members and a second Workspace can
   expect(after[0].x - before[0].x).toBe(40)
   expect(after[1].y - before[1].y).toBe(40)
   expect(after[2]).toEqual(before[2])
-  await page.getByRole('button', { name: '+ Новый Workspace', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Создать Workspace', exact: true }).click()
+  await createFromProjects(page, 'Следующий Workspace')
   await page.getByRole('button', { name: 'Добавить все карты', exact: true }).click()
   await expect(surface(page).locator('[data-project-id]')).toHaveCount(3)
   await page.getByRole('spinbutton', { name: 'Масштаб Workspace в процентах' }).fill('150')
@@ -289,6 +295,8 @@ test('empty projects, malformed layouts and storage errors keep navigation usabl
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.reload()
+  await expect(page.getByRole('heading', { name: 'Пока нет Workspace' })).toBeVisible()
+  await createFromProjects(page, 'Пустой Workspace')
   await expect(surface(page).getByText('Добавьте карты в Workspace', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Создать первый проект' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { DrawingObject } from '../types/drawing'
 import { getMapImage, getPanorama } from '../utils/mapStorage'
 import { getPoints } from '../utils/pointStorage'
+import DrawingShape from './editor/DrawingShape'
 
 interface ProjectPreviewProps {
   projectId: string
@@ -42,7 +43,7 @@ async function thumbnail(file: Blob, kind: PreviewKind): Promise<Blob> {
 
 function DrawingPreview({ objects, name }: { objects: DrawingObject[]; name: string }) {
   const bounds = objects.reduce((bounds, object) => {
-    for (const point of object.points.slice(0, 2)) {
+    for (const point of object.points) {
       bounds.left = Math.min(bounds.left, point.x)
       bounds.right = Math.max(bounds.right, point.x)
       bounds.top = Math.min(bounds.top, point.y)
@@ -56,19 +57,7 @@ function DrawingPreview({ objects, name }: { objects: DrawingObject[]; name: str
   return (
     <svg role="img" aria-label={`Чертёж проекта «${name}»`} className="h-full w-full p-3"
       viewBox={`${bounds.left - padding} ${bounds.top - padding} ${width + padding * 2} ${height + padding * 2}`}>
-      {objects.map((object) => {
-        const [a, b] = object.points
-        return object.type === 'rectangle' ? (
-          <rect key={object.id} x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)}
-            width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)}
-            fill={object.fill ?? 'var(--ttk-drawing-fill)'} stroke={object.stroke ?? 'var(--ttk-graphite)'}
-            strokeWidth={object.strokeWidth ?? 2} strokeDasharray={object.strokeDasharray} vectorEffect="non-scaling-stroke" />
-        ) : (
-          <line key={object.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-            stroke={object.stroke ?? 'var(--ttk-graphite)'} strokeWidth={object.strokeWidth ?? 2}
-            strokeDasharray={object.strokeDasharray} vectorEffect="non-scaling-stroke" />
-        )
-      })}
+      {objects.map((object) => <DrawingShape key={object.id} object={object} />)}
     </svg>
   )
 }
@@ -117,8 +106,8 @@ export default function ProjectPreview({ projectId, name, drawings = [], mode = 
     }
   }, [projectId, mode])
 
-  const objects = drawings.filter((object) => object.points?.length >= 2
-    && object.points.slice(0, 2).every((point) => Number.isFinite(point.x) && Number.isFinite(point.y)))
+  const objects = drawings.filter((object) => object.markerKind !== 'service' && object.points?.length >= 2
+    && object.points.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y)))
   const label = preview ? preview.kind === 'panorama' ? 'Фото' : 'План' : objects.length ? 'Чертёж' : 'Проект'
 
   return (

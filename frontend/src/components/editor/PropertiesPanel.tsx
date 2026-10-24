@@ -1,12 +1,17 @@
 
 import type { DrawingObject } from '../../types/drawing'
-import { PIXELS_PER_METRE } from './drawingGeometry'
+import { canAddVertex, canDeleteVertex, objectBounds, objectName, PIXELS_PER_METRE, vertices } from './drawingGeometry'
+import { getProjects } from '../../utils/projectStorage'
 
 interface PropertiesPanelProps {
   selected: DrawingObject | null
   selectionCount: number
   onUpdate: (updates: Partial<DrawingObject>) => void
   onDelete: () => void
+  selectedVertex?: number | null
+  onAddVertex?: () => void
+  onDeleteVertex?: () => void
+  onEditVertices?: () => void
 }
 
 export default function PropertiesPanel({
@@ -14,6 +19,7 @@ export default function PropertiesPanel({
   selectionCount,
   onUpdate,
   onDelete,
+  selectedVertex, onAddVertex, onDeleteVertex, onEditVertices,
 }: PropertiesPanelProps) {
   if (selectionCount > 1) {
     return (
@@ -42,14 +48,15 @@ export default function PropertiesPanel({
     )
   }
 
-  const width = Math.abs(selected.points[1].x - selected.points[0].x) / PIXELS_PER_METRE
-  const height = Math.abs(selected.points[1].y - selected.points[0].y) / PIXELS_PER_METRE
+  const box = objectBounds(selected)
+  const width = box.width / PIXELS_PER_METRE
+  const height = box.height / PIXELS_PER_METRE
 
   return (
     <div className="p-4 bg-white border-l border-line shadow-sm flex flex-col gap-4">
       <div>
         <h3 className="text-sm font-semibold text-ink mb-2">
-          Объект: {selected.type === 'line' ? 'Линия' : selected.type === 'dimension' ? 'Размер' : selected.isSquare ? 'Квадрат' : 'Прямоугольник'}
+          Объект: {objectName(selected)}
         </h3>
         <div className="flex items-center gap-3 text-xs text-muted">
           <span>ID:</span>
@@ -71,7 +78,7 @@ export default function PropertiesPanel({
           />
         </div>
 
-        <div className="space-y-2">
+        {selected.type !== 'marker' && <><div className="space-y-2">
           <label htmlFor="object-width" className="text-xs font-medium text-body">Ширина</label>
           <div className="flex items-center gap-2">
             <input
@@ -117,10 +124,25 @@ export default function PropertiesPanel({
             }}
             className="w-full accent-brand h-1.5 bg-line rounded-lg appearance-none cursor-pointer"
           />
-        </div>
+        </div></>}
       </div>
 
       <div className="mt-auto">
+        {selected.type === 'marker' ? <div className="mb-4 grid gap-3">
+          <label className="grid gap-1 text-xs">Описание метки<textarea aria-label="Описание метки" value={selected.description ?? ''} maxLength={1000}
+            onChange={(event) => onUpdate({ description: event.target.value })} className="rounded-lg border border-line p-2 text-sm" /></label>
+          {selected.markerKind === 'navigation' && <label className="grid gap-1 text-xs">Переход на карту<select aria-label="Переход на карту" value={selected.targetProjectId ?? ''}
+            onChange={(event) => onUpdate({ targetProjectId: event.target.value })} className="w-full rounded-lg border border-line p-2 text-sm">
+            <option value="">Выберите карту</option>{getProjects().map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+          </select></label>}
+          {selected.markerKind === 'status' && <label className="grid gap-1 text-xs">Статус<select aria-label="Статус метки" value={selected.status ?? 'ready'} onChange={(event) => onUpdate({ status: event.target.value as DrawingObject['status'] })}
+            className="rounded-lg border border-line p-2 text-sm"><option value="ready">Готово</option><option value="progress">В работе</option><option value="blocked">Недоступно</option></select></label>}
+        </div> : vertices(selected).length > 0 && <div className="mb-4 grid gap-2 border-t border-line pt-3">
+          <p className="text-xs text-muted">Вершин: {vertices(selected).length}{selectedVertex != null ? ` · выбрана ${selectedVertex + 1}` : ''}</p>
+          <button type="button" onClick={onEditVertices} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-surface-muted">Редактировать вершины</button>
+          <button type="button" onClick={onAddVertex} disabled={!canAddVertex(selected)} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-surface-muted disabled:opacity-40">Добавить вершину</button>
+          <button type="button" onClick={onDeleteVertex} disabled={selectedVertex == null || !canDeleteVertex(selected)} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-surface-muted disabled:opacity-40">Удалить вершину</button>
+        </div>}
         <button
           type="button"
           onClick={onDelete}

@@ -507,6 +507,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
           </button>
           <Link to={`/projects/${projectId}/editor`}
             className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">Редактировать чертёж</Link>
+          <Link to="/workspace" className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">2D Workspace</Link>
           {panoramaIds.length === 0 && <span className="text-xs text-muted">Добавьте точку на карте и загрузите для неё панораму 360°.</span>}
         </nav>
       </header>

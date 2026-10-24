@@ -178,6 +178,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
               className="ml-auto rounded-lg border border-line px-3 py-2 text-sm text-body hover:bg-brand-soft hover:text-brand">
               2D-карта и панорамы
             </Link>
+            <Link to="/workspace" className="rounded-lg border border-line px-3 py-2 text-sm text-body hover:bg-brand-soft hover:text-brand">2D Workspace</Link>
           </div>
 
           <div className="h-96 md:h-auto md:flex-1 min-h-0">

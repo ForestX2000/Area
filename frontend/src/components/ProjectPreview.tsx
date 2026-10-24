@@ -7,6 +7,7 @@ interface ProjectPreviewProps {
   projectId: string
   name: string
   drawings?: DrawingObject[]
+  mode?: 'content' | 'map'
 }
 
 type PreviewKind = 'panorama' | 'plan'
@@ -72,7 +73,7 @@ function DrawingPreview({ objects, name }: { objects: DrawingObject[]; name: str
   )
 }
 
-export default function ProjectPreview({ projectId, name, drawings = [] }: ProjectPreviewProps) {
+export default function ProjectPreview({ projectId, name, drawings = [], mode = 'content' }: ProjectPreviewProps) {
   const [preview, setPreview] = useState<{ url: string; kind: PreviewKind } | null>(null)
 
   useEffect(() => {
@@ -95,7 +96,7 @@ export default function ProjectPreview({ projectId, name, drawings = [] }: Proje
 
     async function load() {
       try {
-        for (const point of getPoints(projectId)) {
+        for (const point of mode === 'map' ? [] : getPoints(projectId)) {
           if (cancelled) return
           if (await displayImage(await getPanorama(projectId, point.id), 'panorama')) return
         }
@@ -114,7 +115,7 @@ export default function ProjectPreview({ projectId, name, drawings = [] }: Proje
       cancelled = true
       if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
-  }, [projectId])
+  }, [projectId, mode])
 
   const objects = drawings.filter((object) => object.points?.length >= 2
     && object.points.slice(0, 2).every((point) => Number.isFinite(point.x) && Number.isFinite(point.y)))

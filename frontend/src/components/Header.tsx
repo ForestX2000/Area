@@ -26,6 +26,8 @@ export default function Header() {
 
   const pageTitle = isProjectsPage
     ? "Мои проекты"
+    : location.pathname === "/workspace"
+      ? "2D Workspace"
     : location.pathname === "/projects/new"
       ? "Создание проекта"
       : location.pathname.includes("/map")
@@ -148,6 +150,15 @@ export default function Header() {
               >
                 <span aria-hidden="true">▦</span>
                 Мои проекты
+              </NavLink>
+
+              <NavLink
+                to="/workspace"
+                onClick={() => setMenuOpen(false)}
+                className={navClass}
+              >
+                <span aria-hidden="true">▧</span>
+                2D Workspace
               </NavLink>
 
               <NavLink

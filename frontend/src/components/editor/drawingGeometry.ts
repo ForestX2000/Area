@@ -11,7 +11,7 @@ export const SHAPE_TOOLS: { id: DrawingTool; label: string; icon: string }[] = [
   { id: 'triangle', label: 'Треугольник', icon: '△' }, { id: 'diamond', label: 'Ромб', icon: '♢' },
   { id: 'pentagon', label: 'Пятиугольник', icon: '⬠' }, { id: 'hexagon', label: 'Шестиугольник', icon: '⬡' },
   { id: 'star', label: 'Звезда', icon: '☆' }, { id: 'arrow', label: 'Стрелка', icon: '➜' },
-  { id: 'polygon', label: 'Многоугольник', icon: '⬟' }, { id: 'dimension', label: 'Размер', icon: '↔' },
+  { id: 'polygon', label: 'Многоугольник', icon: '⬟' }, { id: 'dimension', label: 'Линейка', icon: '↔' },
 ]
 
 export const MARKER_LABELS: Record<MarkerKind, string> = { info: 'Информационная', navigation: 'Навигационная', status: 'Статусная', service: 'Служебная' }

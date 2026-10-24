@@ -4,8 +4,10 @@ import WorkspaceBoard from '../components/workspace/WorkspaceBoard'
 import { getProjects } from '../utils/projectStorage'
 import { getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage'
 import type { Workspace, WorkspaceCollection } from '../types/workspace'
+import { useConfirmation } from '../contexts/useConfirmation'
 
 export default function WorkspacePage() {
+  const confirm = useConfirmation()
   const { workspaceId } = useParams()
   const navigate = useNavigate()
   const [projects] = useState(() => getProjects())
@@ -39,9 +41,9 @@ export default function WorkspacePage() {
     updateCollection({ ...collection, workspaces: collection.workspaces.map((workspace) => workspace.id === next.id ? next : workspace) })
   }
 
-  function removeWorkspace() {
+  async function removeWorkspace() {
     if (!active) return
-    if (!window.confirm(`Удалить Workspace «${active.name}»? Карты останутся в проектах.`)) return
+    if (!await confirm({ title: 'Удалить Workspace?', message: `Workspace «${active.name}» будет удалён. Карты останутся в проектах.` })) return
     const remaining = collection.workspaces.filter((workspace) => workspace.id !== active.id)
     updateCollection({ version: 1, activeId: remaining[0]?.id ?? '', workspaces: remaining })
     navigate(remaining.length ? `/workspace/${remaining[0].id}` : '/')

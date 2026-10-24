@@ -6,7 +6,10 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import PanoramaViewer from "../components/PanoramaViewer";
 import DrawingPlan from "../components/DrawingPlan";
 import EditorNavigation from "../components/editor/EditorNavigation";
+import { useConfirmation } from '../contexts/useConfirmation';
 import { getProjects } from "../utils/projectStorage";
+import { useProjectFloor } from '../utils/useProjects';
+import { floorStorageId, floorUrl, getFloor } from '../utils/floorStorage';
 import { useObjectUrl } from "../utils/useObjectUrl";
 import type { DrawingObject } from '../types/drawing';
 import type {
@@ -54,16 +57,24 @@ function getCategoryIcon(category?: MapPointCategory) {
 
 export default function ProjectMapPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  return <ProjectMap key={projectId} projectId={projectId} />;
+  const [params] = useSearchParams();
+  const { floor } = useProjectFloor(projectId, params.get('floor'));
+  const floorId = floor?.id ?? 'default';
+  return <ProjectMap key={`${projectId}:${floorId}`} projectId={projectId} floorId={floorId} />;
 }
 
-function ProjectMap({ projectId }: { projectId?: string }) {
+function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: string }) {
+  const confirm = useConfirmation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const storageId = floorStorageId(projectId ?? '', floorId);
+  const explicitFloor = searchParams.has('floor');
   const [openIn2D] = useState(() => searchParams.get("mode") === "2d");
-  const [drawings] = useState(() => (getProjects().find((project) => project.id === projectId)?.drawings ?? [])
-    .filter((object) => object.markerKind !== 'service' && object.points?.length >= 2 && object.points
-      .every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))));
+  const [drawings] = useState(() => {
+    const project = getProjects().find((project) => project.id === projectId);
+    return (project ? getFloor(project, floorId).drawings ?? [] : []).filter((object) => object.markerKind !== 'service' && object.points?.length >= 2 && object.points
+      .every((point) => Number.isFinite(point.x) && Number.isFinite(point.y)));
+  });
   const [imageUrl, replaceImage] = useObjectUrl();
   const [imageName, setImageName] = useState("");
   const [points, setPoints] = useState<MapPoint[]>([]);
@@ -118,8 +129,8 @@ function ProjectMap({ projectId }: { projectId?: string }) {
 
       try {
         const [savedImage, savedPoints] = await Promise.all([
-          getMapImage(projectId),
-          Promise.resolve(getPoints(projectId)),
+          getMapImage(storageId),
+          Promise.resolve(getPoints(storageId)),
         ]);
 
         if (cancelled) return;
@@ -140,12 +151,12 @@ function ProjectMap({ projectId }: { projectId?: string }) {
 
         // Check actual files; older points may not have panoramaKey metadata.
         const available = await Promise.all(savedPoints.map(async (point) =>
-          (await getPanorama(projectId, point.id)) ? point.id : null));
+          (await getPanorama(storageId, point.id)) ? point.id : null));
         if (cancelled) return;
         const ids = available.filter((id): id is string => id !== null);
         setPanoramaIds(ids);
         if (!savedImage && drawings.length === 0 && ids.length === 0 && !openIn2D) {
-          navigate(`/projects/${projectId}/editor`, { replace: true });
+          navigate(floorUrl(`/projects/${projectId}/editor`, floorId, explicitFloor), { replace: true });
           return;
         }
         if (ids.length > 0 && !openIn2D) {
@@ -166,7 +177,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [projectId, navigate, openIn2D, drawings, replaceImage]);
+  }, [projectId, storageId, floorId, explicitFloor, navigate, openIn2D, drawings, replaceImage]);
 
   // Загружаем панораму выбранной точки.
   useEffect(() => {
@@ -188,7 +199,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
       setViewerOpen(false);
 
       try {
-        const file = await getPanorama(projectId, selectedPointId);
+        const file = await getPanorama(storageId, selectedPointId);
 
         if (cancelled) return;
 
@@ -216,7 +227,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [projectId, selectedPointId, replacePanorama]);
+  }, [projectId, storageId, selectedPointId, replacePanorama]);
 
   function openPanorama(id: string) {
     if (id === selectedPointId && panoramaUrl) {
@@ -233,7 +244,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     setPoints(updatedPoints);
 
     try {
-      savePoints(projectId, updatedPoints);
+      savePoints(storageId, updatedPoints);
       setError("");
     } catch {
       setError("Не удалось сохранить точки. Проверь доступное место в браузере.");
@@ -256,7 +267,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     setError("");
 
     try {
-      await saveMapImage(projectId, file);
+      await saveMapImage(storageId, file);
 
       replaceImage(file);
 
@@ -272,9 +283,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
   async function handleImageDelete() {
     if (!projectId) return;
 
-    const confirmed = window.confirm(
-      "Удалить план и все точки с карты? Загруженные панорамы точек также могут остаться в хранилище.",
-    );
+    const confirmed = await confirm({ title: 'Удалить план?', message: 'План и все точки с карты будут удалены. Загруженные панорамы точек также могут остаться в хранилище.' });
 
     if (!confirmed) return;
 
@@ -282,7 +291,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     setError("");
 
     try {
-      await deleteMapImage(projectId);
+      await deleteMapImage(storageId);
 
       replaceImage();
 
@@ -364,7 +373,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     if (!projectId || !selectedPointId) return;
 
     const pointId = selectedPointId;
-    const confirmed = window.confirm("Удалить эту точку и её панораму?");
+    const confirmed = await confirm({ title: 'Удалить точку?', message: 'Точка и её панорама будут удалены. Это действие нельзя отменить.' });
 
     if (!confirmed) return;
 
@@ -372,7 +381,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     setError("");
 
     try {
-      await deletePanorama(projectId, pointId);
+      await deletePanorama(storageId, pointId);
 
       persistPoints(points.filter((point) => point.id !== pointId));
       setPanoramaIds((ids) => ids.filter((id) => id !== pointId));
@@ -401,13 +410,13 @@ function ProjectMap({ projectId }: { projectId?: string }) {
     setError("");
 
     try {
-      await savePanorama(projectId, selectedPointId, file);
+      await savePanorama(storageId, selectedPointId, file);
 
       replacePanorama(file);
 
       setPanoramaName(file.name);
       setPanoramaIds((ids) => ids.includes(selectedPointId) ? ids : [...ids, selectedPointId]);
-      updateSelectedPoint({ panoramaKey: `panorama:${projectId}:${selectedPointId}` });
+      updateSelectedPoint({ panoramaKey: `panorama:${storageId}:${selectedPointId}` });
       setViewerOpen(false);
     } catch {
       setError("Не удалось сохранить панораму.");
@@ -420,14 +429,14 @@ function ProjectMap({ projectId }: { projectId?: string }) {
   async function handlePanoramaDelete() {
     if (!projectId || !selectedPointId) return;
 
-    const confirmed = window.confirm("Удалить панораму этой точки?");
+    const confirmed = await confirm({ title: 'Удалить панораму?', message: 'Панорама этой точки будет удалена. Сама точка останется на карте.' });
     if (!confirmed) return;
 
     setSaving(true);
     setError("");
 
     try {
-      await deletePanorama(projectId, selectedPointId);
+      await deletePanorama(storageId, selectedPointId);
 
       replacePanorama();
 
@@ -502,7 +511,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
           </label>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Link to={`/projects/${projectId}/editor`}
+          <Link to={floorUrl(`/projects/${projectId}/editor`, floorId, explicitFloor)}
             className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">Редактировать чертёж</Link>
           {panoramaIds.length === 0 && <span className="text-xs text-muted">Добавьте точку на карте и загрузите для неё панораму 360°.</span>}
         </div>
@@ -644,7 +653,7 @@ function ProjectMap({ projectId }: { projectId?: string }) {
                 <p className="mt-3 text-xs text-muted">
                   Поддерживаются файлы изображений
                 </p>
-                <Link to={`/projects/${projectId}/editor`} className="mt-4 text-sm font-medium text-brand hover:text-brand-hover">
+                <Link to={floorUrl(`/projects/${projectId}/editor`, floorId, explicitFloor)} className="mt-4 text-sm font-medium text-brand hover:text-brand-hover">
                   Нарисовать план в 2D-редакторе
                 </Link>
               </div>

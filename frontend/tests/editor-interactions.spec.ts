@@ -132,7 +132,7 @@ test('resizing after pan and numeric zoom follows grid coordinates, supports cro
 })
 
 test('line and dimension endpoints can be stretched and undone', async ({ page }) => {
-  for (const tool of ['Линия', 'Размер']) {
+  for (const tool of ['Линия', 'Линейка']) {
     await page.getByRole('button', { name: tool, exact: true }).click()
     await drag(page, { x: 100, y: 100 }, { x: 250, y: 200 })
     await drag(page, { x: 250, y: 200 }, { x: 350, y: 275 })

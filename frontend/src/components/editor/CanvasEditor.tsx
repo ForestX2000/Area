@@ -372,11 +372,19 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
         onContextMenu={(event) => {
-          if (tool !== 'polygon') return
-          event.preventDefault()
           const gesture = gestureRef.current
+          const drawingRuler = gesture?.kind === 'draw' && gesture.tool === 'dimension'
+          const targetId = (event.target as Element).closest('[data-object-id]')?.getAttribute('data-object-id')
+          const ruler = !gesture && tool !== 'polygon' ? visibleObjects.find((object) =>
+            object.type === 'dimension' && object.id === (targetId ?? (tool === 'dimension' ? selectedId : null))) : undefined
+          if (tool !== 'polygon' && !drawingRuler && !ruler) return
+          event.preventDefault()
           clearGesture(true)
-          setPolygon({ tool, points: [], cursor: null })
+          if (tool === 'polygon') setPolygon({ tool, points: [], cursor: null })
+          if (ruler) {
+            onObjectsChange(objects.filter((object) => object.id !== ruler.id))
+            onSelect(selectedIds.filter((id) => id !== ruler.id))
+          }
           lastClickRef.current = null
           if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
         }}

@@ -46,3 +46,9 @@ export function savePoints(
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(allPoints));
 }
+
+export function deletePoints(projectId: string): void {
+  const allPoints = readAllPoints();
+  delete allPoints[projectId];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(allPoints));
+}

@@ -1,24 +1,30 @@
 
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import CanvasEditor from '../components/editor/CanvasEditor'
 import EditorToolbar from '../components/editor/EditorToolbar'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
 import EditorNavigation from '../components/editor/EditorNavigation'
 import { addVertex, canAddVertex, canDeleteVertex, deleteVertex, objectBounds, objectName, scaleDrawing } from '../components/editor/drawingGeometry'
 import type { DrawingObject, DrawingTool } from '../types/drawing'
-import { getProjects, saveProjects } from '../utils/projectStorage'
+import { getProjects } from '../utils/projectStorage'
+import { getFloor, saveFloorDrawings } from '../utils/floorStorage'
+import { useProjectFloor } from '../utils/useProjects'
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  return <ProjectEditor key={projectId} projectId={projectId} />
+  const [params] = useSearchParams()
+  const { floor } = useProjectFloor(projectId, params.get('floor'))
+  const floorId = floor?.id ?? 'default'
+  return <ProjectEditor key={`${projectId}:${floorId}`} projectId={projectId} floorId={floorId} />
 }
 
-function ProjectEditor({ projectId }: { projectId?: string }) {
+function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: string }) {
   const navigate = useNavigate()
-  const [history, setHistory] = useState<{ objects: DrawingObject[]; past: DrawingObject[][]; future: DrawingObject[][] }>(() => ({
-    objects: getProjects().find((project) => project.id === projectId)?.drawings ?? [], past: [], future: [],
-  }))
+  const [history, setHistory] = useState<{ objects: DrawingObject[]; past: DrawingObject[][]; future: DrawingObject[][] }>(() => {
+    const project = getProjects().find((project) => project.id === projectId)
+    return { objects: project ? getFloor(project, floorId).drawings ?? [] : [], past: [], future: [] }
+  })
   const objects = history.objects
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
@@ -38,11 +44,11 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
   useEffect(() => {
     if (!projectId) return
     try {
-      saveProjects(getProjects().map((project) => project.id === projectId ? { ...project, drawings: objects } : project))
+      saveFloorDrawings(projectId, floorId, objects)
     } catch {
       // Keep the drawing available in memory if local storage is full.
     }
-  }, [objects, projectId])
+  }, [objects, projectId, floorId])
 
   const handleObjectsChange = useCallback((next: DrawingObject[]) => {
     setHistory((previous) => JSON.stringify(previous.objects) === JSON.stringify(next) ? previous : {

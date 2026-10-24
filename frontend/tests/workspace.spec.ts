@@ -221,6 +221,16 @@ test('deleted projects are removed from workspaces and incomplete groups dissolv
   await expect(groups(page)).toHaveCount(0)
 })
 
+test('Ctrl+A selects every map in the active Workspace and removal is undoable', async ({ page }) => {
+  await surface(page).focus()
+  await page.keyboard.press('Control+a')
+  await expect(surface(page).locator('[data-selected]')).toHaveCount(3)
+  await page.keyboard.press('Delete')
+  await expect(surface(page).locator('[data-project-id]')).toHaveCount(0)
+  await page.keyboard.press('Control+z')
+  await expect(surface(page).locator('[data-project-id]')).toHaveCount(3)
+})
+
 test('dragging the container header moves all members and a second Workspace can add all maps', async ({ page }) => {
   await choose(page, 'Корпус А').check()
   await choose(page, 'Корпус Б').check()

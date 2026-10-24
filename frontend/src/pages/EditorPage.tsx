@@ -85,7 +85,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return
       const target = event.target
-      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
+      if (target instanceof Element && target.closest('input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"])')) return
       if (event.key === 'Delete' && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
         if (selectedIds.length > 0) {
           event.preventDefault()
@@ -94,7 +94,12 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
         return
       }
       if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return
-      if (event.code === 'KeyZ' || event.key.toLowerCase() === 'z') {
+      if (event.code === 'KeyA' || event.key.toLowerCase() === 'a') {
+        event.preventDefault()
+        setSelectedIds(objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object) => object.id))
+        setSelectedVertex(null)
+        setTool('select')
+      } else if (event.code === 'KeyZ' || event.key.toLowerCase() === 'z') {
         event.preventDefault()
         handleUndo()
       } else if (event.code === 'KeyY' || event.key.toLowerCase() === 'y') {
@@ -104,7 +109,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleUndo, handleRedo, handleDelete, selectedIds.length])
+  }, [handleUndo, handleRedo, handleDelete, selectedIds.length, objects, showServiceMarks])
 
   const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
     setSelectedIds(ids)
@@ -154,7 +159,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     <div className="bg-surface-muted">
       <EditorNavigation projectId={projectId} />
       <div className="grid overflow-hidden rounded-b-xl border border-line md:h-[calc(100dvh-12rem)] md:min-h-[38rem] md:grid-cols-[240px_minmax(0,1fr)_240px]">
-        <aside aria-label="Свойства и объекты" className="order-2 overflow-y-auto border-r border-line bg-white md:order-1">
+        <aside aria-label="Свойства и объекты" className="order-3 overflow-y-auto border-l border-line bg-white">
           <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
             selectedVertex={selectedVertex} onEditVertices={() => setTool('vertices')}
             onAddVertex={() => {
@@ -188,10 +193,10 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
             selectedVertex={selectedVertex} onVertexSelect={setSelectedVertex} showServiceMarks={showServiceMarks}
             onActivateMarker={(object) => { if (object.markerKind === 'navigation' && object.targetProjectId) navigate(`/projects/${object.targetProjectId}/map`) }} />
         </div>
-        <aside aria-label="Панель инструментов" className="order-3 overflow-y-auto border-l border-line">
+        <aside aria-label="Панель инструментов" className="order-2 overflow-y-auto border-r border-line md:order-1">
           <EditorToolbar
             tool={tool}
-            onToolChange={(next) => { setTool(next); if (next !== 'vertices') setSelectedIds([]); setSelectedVertex(null) }}
+            onToolChange={(next) => { setTool(next); if (next === 'marker-service') setShowServiceMarks(true); if (next !== 'vertices') setSelectedIds([]); setSelectedVertex(null) }}
             gridSize={gridSize}
             onGridSizeChange={setGridSize}
             snapToGrid={snapToGrid}

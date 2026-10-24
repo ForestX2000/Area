@@ -23,7 +23,7 @@ export interface DrawingObject {
 
 export interface CanvasState {
   objects: DrawingObject[]
-  selectedId: string | null
+  selectedIds: string[]
   tool: DrawingTool
   gridSize: number
   snapToGrid: boolean

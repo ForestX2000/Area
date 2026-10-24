@@ -17,7 +17,8 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     objects: getProjects().find((project) => project.id === projectId)?.drawings ?? [], past: [], future: [],
   }))
   const objects = history.objects
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
   const [tool, setTool] = useState<DrawingTool>('select')
   const [gridSize, setGridSize] = useState(0.5)
   const [snapToGrid, setSnapToGrid] = useState(true)
@@ -49,7 +50,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
       const objects = previous.past.at(-1)
       return objects ? { objects, past: previous.past.slice(0, -1), future: [...previous.future, previous.objects] } : previous
     })
-    setSelectedId(null)
+    setSelectedIds([])
   }, [])
 
   const handleRedo = useCallback(() => {
@@ -57,7 +58,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
       const objects = previous.future.at(-1)
       return objects ? { objects, past: [...previous.past.slice(-99), previous.objects], future: previous.future.slice(0, -1) } : previous
     })
-    setSelectedId(null)
+    setSelectedIds([])
   }, [])
 
   useEffect(() => {
@@ -78,8 +79,9 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleUndo, handleRedo])
 
-  const handleSelect = useCallback((id: string | null) => {
-    setSelectedId(id)
+  const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
+    setSelectedIds(ids)
+    if (activateSelectionTool) setTool('select')
   }, [])
 
   const handleUpdate = useCallback(
@@ -107,10 +109,10 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
   )
 
   const handleDelete = useCallback(() => {
-    if (!selectedId) return
-    setSelectedId(null)
-    handleObjectsChange(objects.filter((o) => o.id !== selectedId))
-  }, [selectedId, objects, handleObjectsChange])
+    if (selectedIds.length === 0) return
+    setSelectedIds([])
+    handleObjectsChange(objects.filter((object) => !selectedIds.includes(object.id)))
+  }, [selectedIds, objects, handleObjectsChange])
 
   if (!projectId) {
     return (
@@ -138,7 +140,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
         <aside className="flex flex-col md:w-56 shrink-0 overflow-y-auto">
           <EditorToolbar
             tool={tool}
-            onToolChange={(next) => { setTool(next); setSelectedId(null) }}
+            onToolChange={(next) => { setTool(next); setSelectedIds([]) }}
             gridSize={gridSize}
             onGridSizeChange={setGridSize}
             snapToGrid={snapToGrid}
@@ -171,7 +173,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
             <CanvasEditor
               objects={objects}
               onObjectsChange={handleObjectsChange}
-              selectedId={selectedId}
+              selectedIds={selectedIds}
               onSelect={handleSelect}
               tool={tool}
               gridSize={gridSize}
@@ -186,6 +188,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
         <aside className="md:w-64 shrink-0 overflow-y-auto border-l border-line bg-white">
           <PropertiesPanel
             selected={selected}
+            selectionCount={selectedIds.length}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
           />

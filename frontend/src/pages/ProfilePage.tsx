@@ -89,7 +89,7 @@ export default function ProfilePage() {
                   <input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="flex-1 rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-soft0 focus:ring-1 focus:ring-brand-soft"
+                    className="flex-1 rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand-soft"
                   />
                   <button
                     type="button"

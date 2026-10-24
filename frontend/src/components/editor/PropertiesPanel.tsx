@@ -4,15 +4,29 @@ import { PIXELS_PER_METRE } from './drawingGeometry'
 
 interface PropertiesPanelProps {
   selected: DrawingObject | null
+  selectionCount: number
   onUpdate: (updates: Partial<DrawingObject>) => void
   onDelete: () => void
 }
 
 export default function PropertiesPanel({
   selected,
+  selectionCount,
   onUpdate,
   onDelete,
 }: PropertiesPanelProps) {
+  if (selectionCount > 1) {
+    return (
+      <div className="flex flex-col gap-4 border-l border-line bg-white p-4 shadow-sm">
+        <h3 className="text-sm font-semibold text-ink" role="status">Выделено объектов: {selectionCount}</h3>
+        <p className="text-sm text-muted">Перетащите любую выделенную фигуру инструментом «Выделение», чтобы переместить всю группу.</p>
+        <button type="button" onClick={onDelete}
+          className="w-full rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-hover hover:bg-brand-soft transition">
+          Удалить выбранные
+        </button>
+      </div>
+    )
+  }
   if (!selected) {
     return (
       <div className="p-4 bg-white border-l border-line shadow-sm">
@@ -53,7 +67,7 @@ export default function PropertiesPanel({
             onChange={(e) => {
               onUpdate({ label: e.target.value })
             }}
-            className="w-full rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand-soft0 focus:bg-white"
+            className="w-full rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white"
           />
         </div>
 
@@ -67,7 +81,7 @@ export default function PropertiesPanel({
               step="0.1"
               value={width.toString()}
               onChange={(e) => onUpdate({ width: Math.max(0, Number(e.target.value) || 0) * PIXELS_PER_METRE })}
-              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand-soft0 focus:bg-white"
+              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white"
             />
             <span className="text-xs text-muted">м</span>
           </div>
@@ -83,7 +97,7 @@ export default function PropertiesPanel({
               step="0.1"
               value={height.toString()}
               onChange={(e) => onUpdate({ height: Math.max(0, Number(e.target.value) || 0) * PIXELS_PER_METRE })}
-              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand-soft0 focus:bg-white"
+              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white"
             />
             <span className="text-xs text-muted">м</span>
           </div>

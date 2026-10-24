@@ -54,3 +54,33 @@ export function pointToSegmentDistance(point: Point, start: Point, end: Point): 
     ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared))
   return Math.hypot(point.x - start.x - t * dx, point.y - start.y - t * dy)
 }
+
+export function intersectsSelection(object: DrawingObject, start: Point, end: Point): boolean {
+  const left = Math.min(start.x, end.x)
+  const right = Math.max(start.x, end.x)
+  const top = Math.min(start.y, end.y)
+  const bottom = Math.max(start.y, end.y)
+  const [a, b] = object.points
+  if (object.type === 'rectangle') {
+    return Math.max(a.x, b.x) >= left && Math.min(a.x, b.x) <= right
+      && Math.max(a.y, b.y) >= top && Math.min(a.y, b.y) <= bottom
+  }
+  // Clip the actual segment, rather than its bounding box, against the frame.
+  let near = 0
+  let far = 1
+  for (const axis of [
+    { origin: a.x, delta: b.x - a.x, min: left, max: right },
+    { origin: a.y, delta: b.y - a.y, min: top, max: bottom },
+  ]) {
+    if (axis.delta === 0) {
+      if (axis.origin < axis.min || axis.origin > axis.max) return false
+      continue
+    }
+    const first = (axis.min - axis.origin) / axis.delta
+    const second = (axis.max - axis.origin) / axis.delta
+    near = Math.max(near, Math.min(first, second))
+    far = Math.min(far, Math.max(first, second))
+    if (near > far) return false
+  }
+  return true
+}

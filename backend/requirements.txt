@@ -1,9 +1,6 @@
-# Список зависимостей, необходимых для работы бекенда
+
+# Список зависимостей, необходимых для работы бэкенда
 fastapi
 uvicorn[standard]
 pytest
 httpx
-sqlalchemy
-psycopg[binary]
-alembic
-python-dotenvwinget install PostgreSQL.PostgreSQL.18 --interactive

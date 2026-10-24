@@ -14,7 +14,7 @@ interface CanvasEditorProps {
   onZoomChange: (zoom: number) => void
 }
 
-const GRID_COLOR = '#e2e8f0'
+const GRID_COLOR = '#94a3b8'
 const DIMENSION_COLOR = '#059669'
 const SNAP_COLOR = '#e11d48'
 const SELECT_COLOR = '#2563eb'
@@ -35,9 +35,6 @@ export default function CanvasEditor({
   onZoomChange,
 }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const objectsRef = useRef(objects)
-  objectsRef.current = objects
-
   const [isDrawing, setIsDrawing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [startPoint, setStartPoint] = useState<Point>({ x: 0, y: 0 })
@@ -84,7 +81,7 @@ export default function CanvasEditor({
 
   const snapPoints = useMemo(() => {
     const points: Point[] = []
-    for (const obj of objectsRef.current) {
+    for (const obj of objects) {
       if (obj.type === 'line') {
         points.push(obj.points[0], obj.points[1])
       }
@@ -134,43 +131,12 @@ export default function CanvasEditor({
     [gridSize, snapToGrid]
   )
 
-  const findObjectAtPoint = useCallback(
-    (pt: Point): DrawingObject | null => {
-      const threshold = snapToGrid ? gridSize / 2 : 10
-      for (let i = objectsRef.current.length - 1; i >= 0; i--) {
-        const obj = objectsRef.current[i]
-        if (obj.type === 'line') {
-          const [p1, p2] = obj.points
-          if (pointToLineDistance(pt, p1, p2) < threshold) return obj
-        }
-        if (obj.type === 'rectangle') {
-          const first = obj.points[0]
-          const second = obj.points[1]
-          const x = Math.min(first.x, second.x)
-          const y = Math.min(first.y, second.y)
-          const w = Math.abs(second.x - first.x)
-          const h = Math.abs(second.y - first.y)
-          if (
-            pt.x >= x - threshold &&
-            pt.x <= x + w + threshold &&
-            pt.y >= y - threshold &&
-            pt.y <= y + h + threshold
-          ) {
-            return obj
-          }
-        }
-      }
-      return null
-    },
-    [snapToGrid, gridSize]
-  )
-
   const handleMouseDown = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
       // Перетаскивание выделенного объекта
       if (tool === 'select' && selectedId) {
         const pt = svgPoint(event.clientX, event.clientY)
-        const obj = objectsRef.current.find((o) => o.id === selectedId)
+        const obj = objects.find((o) => o.id === selectedId)
         if (obj) {
           const x = Math.min(obj.points[0].x, obj.points[1].x)
           const y = Math.min(obj.points[0].y, obj.points[1].y)
@@ -192,13 +158,11 @@ export default function CanvasEditor({
 
       if (tool === 'select') {
         const pt = svgPoint(event.clientX, event.clientY)
-        const snapped = findSnapPoint(pt)
-        const clickPt = snapped ?? pt
-        const clicked = findObjectAtPoint(clickPt)
+        const clicked = findObjectAt(objects, pt, gridSize, snapToGrid)
         onSelect(clicked ? clicked.id : null)
-        setSnapTarget(snapped)
         setIsDrawing(false)
         setIsDragging(false)
+        setSnapTarget(null)
         return
       }
 
@@ -212,7 +176,7 @@ export default function CanvasEditor({
       setIsDrawing(true)
       setIsDragging(false)
     },
-    [tool, selectedId, onSelect, svgPoint, findSnapPoint, findObjectAtPoint, applyGridSnap]
+    [tool, selectedId, objects, onSelect, svgPoint, findSnapPoint, findObjectAt, applyGridSnap, gridSize, snapToGrid]
   )
 
   const handleMouseMove = useCallback(
@@ -223,7 +187,7 @@ export default function CanvasEditor({
         const finalPt = snapped ?? applyGridSnap(pt)
         setSnapTarget(snapped)
 
-        const obj = objectsRef.current.find((o) => o.id === selectedId)
+        const obj = objects.find((o) => o.id === selectedId)
         if (!obj) return
 
         const dx = finalPt.x - dragOffset.x
@@ -232,7 +196,7 @@ export default function CanvasEditor({
         const h = Math.abs(obj.points[1].y - obj.points[0].y)
 
         onObjectsChange(
-          objectsRef.current.map((o) => {
+          objects.map((o) => {
             if (o.id !== selectedId) return o
             return {
               ...o,
@@ -254,7 +218,7 @@ export default function CanvasEditor({
       setSnapTarget(snapped)
       setCurrentPoint(pt)
     },
-    [isDragging, selectedId, objectsRef, onObjectsChange, svgPoint, findSnapPoint, applyGridSnap, dragOffset]
+    [isDragging, selectedId, objects, onObjectsChange, svgPoint, findSnapPoint, applyGridSnap, dragOffset]
   )
 
   const handleMouseUp = useCallback(() => {
@@ -314,14 +278,14 @@ export default function CanvasEditor({
     }
 
     if (newObject) {
-      onObjectsChange([...objectsRef.current, newObject])
+      onObjectsChange([...objects, newObject])
       setNextId(nextId + 1)
       onSelect(newObject.id)
     }
 
     setIsDrawing(false)
     setSnapTarget(null)
-  }, [tool, startPoint, currentPoint, nextId, onObjectsChange, onSelect, findSnapPoint, applyGridSnap])
+  }, [tool, startPoint, currentPoint, nextId, objects, onObjectsChange, onSelect, findSnapPoint, applyGridSnap])
 
   const handleWheel = useCallback(
     (event: React.WheelEvent<SVGSVGElement>) => {
@@ -366,10 +330,10 @@ export default function CanvasEditor({
     } as DrawingObject
   }, [isDrawing, tool, startPoint, currentPoint, nextId])
 
-  const selectedObj = objectsRef.current.find((o) => o.id === selectedId)
+  const selectedObj = objects.find((o) => o.id === selectedId)
 
   return (
-    <div className="relative w-full h-full bg-slate-50 overflow-hidden">
+    <div className="relative w-full h-full bg-white overflow-hidden">
       <svg
         ref={svgRef}
         className="w-full h-full block"
@@ -388,18 +352,18 @@ export default function CanvasEditor({
             <path
               d={`M 0 0 L ${gridSize * zoom} 0`}
               stroke={GRID_COLOR}
-              strokeWidth="0.5"
+              strokeWidth="1"
             />
             <path
               d={`M 0 0 L 0 ${gridSize * zoom}`}
               stroke={GRID_COLOR}
-              strokeWidth="0.5"
+              strokeWidth="1"
             />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
 
-        {objectsRef.current.map((obj) => {
+        {objects.map((obj) => {
           const isSelected = obj.id === selectedId
           if (obj.type === 'line') {
             return (
@@ -556,6 +520,39 @@ export default function CanvasEditor({
       )}
     </div>
   )
+}
+
+function findObjectAt(
+  objects: DrawingObject[],
+  pt: Point,
+  gridSize: number,
+  snapToGrid: boolean
+): DrawingObject | null {
+  const threshold = snapToGrid ? gridSize / 2 : 10
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const obj = objects[i]
+    if (obj.type === 'line') {
+      const [p1, p2] = obj.points
+      if (pointToLineDistance(pt, p1, p2) < threshold) return obj
+    }
+    if (obj.type === 'rectangle') {
+      const first = obj.points[0]
+      const second = obj.points[1]
+      const x = Math.min(first.x, second.x)
+      const y = Math.min(first.y, second.y)
+      const w = Math.abs(second.x - first.x)
+      const h = Math.abs(second.y - first.y)
+      if (
+        pt.x >= x - threshold &&
+        pt.x <= x + w + threshold &&
+        pt.y >= y - threshold &&
+        pt.y <= y + h + threshold
+      ) {
+        return obj
+      }
+    }
+  }
+  return null
 }
 
 function pointToLineDistance(p: Point, l1: Point, l2: Point): number {

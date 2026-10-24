@@ -50,6 +50,9 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   const [selectionBox, setSelectionBox] = useState<{ start: Point; end: Point } | null>(null)
   const [snapTarget, setSnapTarget] = useState<Point | null>(null)
   const [isPanning, setIsPanning] = useState(false)
+  const [polygon, setPolygon] = useState<{ tool: DrawingTool; points: Point[]; cursor: Point | null }>(() => ({ tool, points: [], cursor: null }))
+  if (polygon.tool !== tool) setPolygon({ tool, points: [], cursor: null })
+  const polygonPoints = polygon.tool === tool && tool === 'polygon' ? polygon.points : []
   const patternId = useId().replace(/:/g, '')
   const cellSize = Math.max(0.1, gridSize) * PIXELS_PER_METRE
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
@@ -132,6 +135,19 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     return visibleObjects.toReversed().find((object) => hitObject(object, point, tolerance))
   }
 
+  function finishPolygon() {
+    if (polygonPoints.length < 3) return
+    const [origin, second] = polygonPoints
+    const nonCollinear = polygonPoints.some((point) => Math.abs((second.x - origin.x) * (point.y - origin.y) - (second.y - origin.y) * (point.x - origin.x)) > 0.01)
+    if (!nonCollinear) return
+    const created: DrawingObject = { id: crypto.randomUUID(), type: 'polygon', shapeKind: 'polygon', points: polygonPoints,
+      stroke: 'var(--ttk-graphite)', strokeWidth: 2, fill: 'var(--ttk-drawing-fill)' }
+    onObjectsChange([...objects, created])
+    setPolygon({ tool, points: [], cursor: null })
+    onSelect([created.id], true)
+    setSnapTarget(null)
+  }
+
   function handlePointerDown(event: PointerEvent<SVGSVGElement>) {
     if ((event.button !== 0 && event.button !== 1) || gestureRef.current) return
     event.preventDefault()
@@ -146,6 +162,19 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       return
     }
     const point = svgPoint(event)
+    if (tool === 'polygon') {
+      lastClickRef.current = null
+      clickCandidateRef.current = null
+      const first = polygonPoints[0]
+      if (first && Math.hypot(point.x - first.x, point.y - first.y) <= 12 / zoom) {
+        finishPolygon()
+        return
+      }
+      const next = resolvePoint(point, event.shiftKey)
+      if (polygonPoints.some((vertex) => Math.hypot(vertex.x - next.x, vertex.y - next.y) < 0.01)) return
+      setPolygon({ tool, points: [...polygonPoints, next], cursor: next })
+      return
+    }
     const vertexHandle = (event.target as Element).closest('[data-vertex-handle]')
     const vertexObject = vertexHandle ? objects.find((object) => object.id === selectedId) : undefined
     if (vertexHandle && vertexObject) {
@@ -243,6 +272,11 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       setPan(nextPan)
       return
     }
+    if (tool === 'polygon' && polygonPoints.length > 0) {
+      const cursor = resolvePoint(svgPoint(event), event.shiftKey)
+      setPolygon({ tool, points: polygonPoints, cursor })
+      return
+    }
     const next = updateGesture(event)
     if (next) setDrafts(next)
   }
@@ -332,6 +366,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
         onDoubleClick={(event) => {
+          if (tool === 'polygon') return
           const point = svgPoint(event as unknown as PointerEvent<SVGSVGElement>)
           const object = objects.find((item) => item.id === selectedId)
           if (tool === 'vertices' && object && canAddVertex(object) && !(event.target as Element).closest('[data-vertex-handle]')) {
@@ -342,6 +377,20 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         }}
         onAuxClick={(event) => { if (event.button === 1) event.preventDefault() }}
         onKeyDown={(event) => {
+          const command = (event.ctrlKey || event.metaKey) && !event.altKey
+          if (command && (event.code === 'KeyA' || event.key.toLowerCase() === 'a')) {
+            const gesture = gestureRef.current
+            clearGesture(true)
+            setPolygon({ tool, points: [], cursor: null })
+            if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
+            return
+          }
+          if (polygonPoints.length > 0 && command && (event.code === 'KeyZ' || event.code === 'KeyY')) {
+            event.preventDefault()
+            event.stopPropagation()
+            if (event.code === 'KeyZ') setPolygon({ tool, points: polygonPoints.slice(0, -1), cursor: polygon.cursor })
+            return
+          }
           if (gestureRef.current && (event.ctrlKey || event.metaKey)
             && (event.code === 'KeyY' || event.key.toLowerCase() === 'y')) {
             event.preventDefault()
@@ -354,6 +403,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             event.stopPropagation()
             const gesture = gestureRef.current
             clearGesture(true)
+            setPolygon({ tool, points: [], cursor: null })
             if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
           }
         }}
@@ -373,6 +423,20 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         <g ref={contentRef} data-canvas-content transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
           {visibleObjects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
           {drafts.filter((draft) => draft.id === 'preview').map((draft) => renderObject(draft, true))}
+          {polygonPoints.length > 0 && <g data-polygon-construction>
+            <polyline data-polygon-preview points={[...polygonPoints, ...(polygon.cursor ? [polygon.cursor] : [])].map((point) => `${point.x},${point.y}`).join(' ')}
+              fill="none" stroke="var(--ttk-red)" strokeWidth="2" strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+            {polygon.cursor && polygonPoints.length >= 2 && <line x1={polygon.cursor.x} y1={polygon.cursor.y} x2={polygonPoints[0].x} y2={polygonPoints[0].y}
+              stroke="var(--ttk-red)" strokeWidth="1" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+            {polygonPoints.map((point, index) => <circle key={index} data-polygon-point={index}
+              cx={point.x} cy={point.y} r={(index === 0 ? 7 : 4) / zoom} fill={index === 0 ? 'var(--ttk-red)' : 'white'}
+              stroke="var(--ttk-red)" strokeWidth={1.5 / zoom}
+              role={index === 0 && polygonPoints.length >= 3 ? 'button' : undefined}
+              aria-label={index === 0 && polygonPoints.length >= 3 ? 'Замкнуть многоугольник' : undefined}
+              tabIndex={index === 0 && polygonPoints.length >= 3 ? 0 : undefined}
+              onKeyDown={(event) => { if (index === 0 && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.stopPropagation(); finishPolygon() } }}
+              style={{ cursor: index === 0 && polygonPoints.length >= 3 ? 'pointer' : 'crosshair' }} />)}
+          </g>}
           {selectionBox && <rect data-selection-box
             x={Math.min(selectionBox.start.x, selectionBox.end.x)} y={Math.min(selectionBox.start.y, selectionBox.end.y)}
             width={Math.abs(selectionBox.end.x - selectionBox.start.x)} height={Math.abs(selectionBox.end.y - selectionBox.start.y)}
@@ -383,7 +447,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         </g>
       </svg>
       <div className="absolute bottom-3 left-3 pointer-events-none rounded border border-line bg-white/90 px-2 py-1 text-xs text-muted">
-        Колесико / два пальца — перемещение · Ctrl + колесо — масштаб · ячейка {gridSize} м
+        {tool === 'polygon' ? `Многоугольник: ${polygonPoints.length} вершин · клик по первой точке — завершить · Escape — отменить` : `Колесико / два пальца — перемещение · Ctrl + колесо — масштаб · ячейка ${gridSize} м`}
       </div>
     </div>
   )

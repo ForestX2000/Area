@@ -232,7 +232,11 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
     if ((event.target as Element).closest('input:not([type="checkbox"]), textarea, select, [contenteditable]:not([contenteditable="false"])') || document.querySelector('dialog[open]')) return
     if (event.key === 'Escape') { cancel(); event.preventDefault(); return }
     if ((event.ctrlKey || event.metaKey) && !event.altKey) {
-      if (event.code === 'KeyZ' || event.code === 'KeyY') {
+      if (event.code === 'KeyA' || event.key.toLowerCase() === 'a') {
+        event.preventDefault()
+        cancel()
+        setSelected(workspace.nodes.map((node) => node.projectId))
+      } else if (event.code === 'KeyZ' || event.code === 'KeyY') {
         event.preventDefault()
         if (gestureRef.current) { if (event.code === 'KeyZ') cancel(); return }
         if (event.code === 'KeyY' || event.shiftKey) redo()

@@ -1,15 +1,15 @@
 import type { DrawingObject } from '../../types/drawing'
-import { objectBounds } from './drawingGeometry'
+import { drawingTransform, objectLocalBounds } from './drawingGeometry'
 
 export default function DrawingShape({ object, stroke, preview = false }: { object: DrawingObject; stroke?: string; preview?: boolean }) {
-  const box = objectBounds(object)
+  const box = objectLocalBounds(object)
   const [a, b] = object.points
   const style = { stroke: stroke ?? object.stroke ?? 'var(--ttk-graphite)', strokeWidth: object.strokeWidth ?? 2,
-    strokeDasharray: preview ? '4 4' : object.strokeDasharray, vectorEffect: 'non-scaling-stroke' as const }
+    strokeDasharray: preview ? '4 4' : object.strokeDasharray, vectorEffect: 'non-scaling-stroke' as const, transform: drawingTransform(object) }
   if (object.type === 'marker') {
     const kind = object.markerKind ?? 'info'
     const colour = kind === 'status' ? object.status === 'blocked' ? '#b91c1c' : object.status === 'progress' ? '#b45309' : '#216e4e' : kind === 'service' ? '#737373' : 'var(--ttk-red)'
-    return <g data-marker-kind={kind}>
+    return <g data-marker-kind={kind} transform={drawingTransform(object)}>
       <title>{object.label || 'Метка'}{object.description ? `: ${object.description}` : ''}</title>
       <circle cx={a.x} cy={a.y} r="13" fill={colour} stroke={stroke ?? 'white'} strokeWidth="2" vectorEffect="non-scaling-stroke" />
       <text x={a.x} y={a.y + 4} textAnchor="middle" fontSize="14" fill="white" pointerEvents="none">{kind === 'info' ? 'i' : kind === 'navigation' ? '➜' : kind === 'status' ? '●' : '⚙'}</text>

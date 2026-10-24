@@ -3,6 +3,7 @@ import type { DrawingObject } from '../types/drawing'
 import { getMapImage, getPanorama } from '../utils/mapStorage'
 import { getPoints } from '../utils/pointStorage'
 import DrawingShape from './editor/DrawingShape'
+import { objectsBounds } from './editor/drawingGeometry'
 import { floorStorageId, getFloor } from '../utils/floorStorage'
 import { useProjects } from '../utils/useProjects'
 
@@ -44,15 +45,7 @@ async function thumbnail(file: Blob, kind: PreviewKind): Promise<Blob> {
 }
 
 function DrawingPreview({ objects, name }: { objects: DrawingObject[]; name: string }) {
-  const bounds = objects.reduce((bounds, object) => {
-    for (const point of object.points) {
-      bounds.left = Math.min(bounds.left, point.x)
-      bounds.right = Math.max(bounds.right, point.x)
-      bounds.top = Math.min(bounds.top, point.y)
-      bounds.bottom = Math.max(bounds.bottom, point.y)
-    }
-    return bounds
-  }, { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity })
+  const bounds = objectsBounds(objects)
   const width = Math.max(1, bounds.right - bounds.left)
   const height = Math.max(1, bounds.bottom - bounds.top)
   const padding = Math.max(10, Math.max(width, height) * 0.08)

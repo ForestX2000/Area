@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
-import { addVertex, canAddVertex, createDrawing, hitObject, intersectsSelection, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, vertices } from './drawingGeometry'
+import { addVertex, canAddVertex, createDrawing, drawingPoints, hitObject, intersectsSelection, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, objectLocalBounds, objectsBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, rotateDrawing, vertices } from './drawingGeometry'
 import DrawingShape from './DrawingShape'
 
 interface CanvasEditorProps {
@@ -26,7 +26,14 @@ type Gesture =
   | { kind: 'move'; pointerId: number; start: Point; original: DrawingObject; originals: DrawingObject[] }
   | { kind: 'resize'; pointerId: number; start: Point; original: DrawingObject; handle: number }
   | { kind: 'vertex'; pointerId: number; start: Point; original: DrawingObject; handle: number }
+  | { kind: 'rotate'; pointerId: number; start: Point; originals: DrawingObject[]; frame: RotationFrame }
   | { kind: 'marquee'; pointerId: number; start: Point; previousSelection: string[] }
+
+interface RotationFrame {
+  box: ReturnType<typeof objectBounds>
+  center: Point
+  rotation: number
+}
 
 interface ClickPoint {
   x: number
@@ -50,6 +57,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   const [selectionBox, setSelectionBox] = useState<{ start: Point; end: Point } | null>(null)
   const [snapTarget, setSnapTarget] = useState<Point | null>(null)
   const [isPanning, setIsPanning] = useState(false)
+  const [rotationPreview, setRotationPreview] = useState<RotationFrame | null>(null)
   const [polygon, setPolygon] = useState<{ tool: DrawingTool; points: Point[]; cursor: Point | null }>(() => ({ tool, points: [], cursor: null }))
   if (polygon.tool !== tool) setPolygon({ tool, points: [], cursor: null })
   const polygonPoints = polygon.tool === tool && tool === 'polygon' ? polygon.points : []
@@ -63,6 +71,13 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
   const draftsById = new Map(drafts.map((draft) => [draft.id, draft]))
   const visibleObjects = objects.filter((object) => object.markerKind !== 'service' || showServiceMarks)
+  const selectedObjects = visibleObjects.filter((object) => selectedIds.includes(object.id)).map((object) => draftsById.get(object.id) ?? object)
+  const selectionBounds = selectedObjects.length === 1 ? objectLocalBounds(selectedObjects[0]) : objectsBounds(selectedObjects)
+  const rotationFrame = rotationPreview ?? {
+    box: selectionBounds,
+    center: { x: (selectionBounds.left + selectionBounds.right) / 2, y: (selectionBounds.top + selectionBounds.bottom) / 2 },
+    rotation: selectedObjects.length === 1 ? selectedObjects[0].rotation ?? 0 : 0,
+  }
 
   useLayoutEffect(() => { viewportRef.current.zoom = zoom }, [zoom])
   useEffect(() => { lastClickRef.current = null }, [tool])
@@ -167,6 +182,16 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       return
     }
     const point = svgPoint(event)
+    if ((event.target as Element).closest('[data-rotation-handle]') && selectedObjects.length > 0) {
+      lastClickRef.current = null
+      clickCandidateRef.current = null
+      onSelect(selectedIds, true)
+      gestureRef.current = { kind: 'rotate', pointerId: event.pointerId, start: point, originals: selectedObjects, frame: rotationFrame }
+      setRotationPreview(rotationFrame)
+      setDrafts(selectedObjects)
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     if (tool === 'polygon') {
       lastClickRef.current = null
       clickCandidateRef.current = null
@@ -188,6 +213,13 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       lastClickRef.current = null
       gestureRef.current = { kind: 'vertex', pointerId: event.pointerId, start: point, original: vertexObject, handle }
       event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
+    if (tool === 'select' && event.shiftKey && !(event.target as Element).closest('[data-resize-handle]')) {
+      lastClickRef.current = null
+      clickCandidateRef.current = null
+      const object = findObject(point)
+      if (object) onSelect(selectedIds.includes(object.id) ? selectedIds.filter((id) => id !== object.id) : [...selectedIds, object.id])
       return
     }
     const previousClick = lastClickRef.current
@@ -239,6 +271,14 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       const end = resolvePoint(raw, event.shiftKey)
       return [createDrawing(gesture.tool, gesture.start, end, 'preview')]
     }
+    if (gesture.kind === 'rotate') {
+      const { center } = gesture.frame
+      if (Math.hypot(raw.x - center.x, raw.y - center.y) < 2 / zoom) return drafts
+      const angle = (Math.atan2(raw.y - center.y, raw.x - center.x) - Math.atan2(gesture.start.y - center.y, gesture.start.x - center.x)) * 180 / Math.PI
+      const delta = event.shiftKey ? Math.round(angle / 15) * 15 : angle
+      setRotationPreview({ ...gesture.frame, rotation: gesture.frame.rotation + delta })
+      return gesture.originals.map((object) => rotateDrawing(object, center, delta))
+    }
     const original = gesture.original
     if (Math.hypot(raw.x - gesture.start.x, raw.y - gesture.start.y) < 2 / zoom) {
       return gesture.kind === 'move' ? gesture.originals : [original]
@@ -247,7 +287,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       return [resizeDrawing(original, gesture.handle, resolvePoint(raw, event.shiftKey, [original.id]))]
     }
     if (gesture.kind === 'vertex') return [moveVertex(original, gesture.handle, resolvePoint(raw, event.shiftKey, [original.id]))]
-    const anchor = original.points[0]
+    const anchor = drawingPoints(original)[0]
     const target = resolvePoint({ x: anchor.x + raw.x - gesture.start.x,
       y: anchor.y + raw.y - gesture.start.y }, event.shiftKey, gesture.originals.map((object) => object.id))
     return gesture.originals.map((object) => ({ ...object, points: object.points.map((point) => ({
@@ -295,6 +335,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     setSelectionBox(null)
     setSnapTarget(null)
     setIsPanning(false)
+    setRotationPreview(null)
   }
 
   function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
@@ -319,7 +360,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       const [object] = next
       const box = objectBounds(object)
       const valid = object.type === 'marker' || (['rectangle', 'ellipse', 'polygon'].includes(object.type) ? box.width > 0.01 && box.height > 0.01 : Math.hypot(box.width, box.height) > 0.01)
-      if (gesture.kind === 'move' || ((gesture.kind === 'resize' || gesture.kind === 'vertex') && valid)) {
+      if (gesture.kind === 'move' || gesture.kind === 'rotate' || ((gesture.kind === 'resize' || gesture.kind === 'vertex') && valid)) {
         const replacements = new Map(next.map((object) => [object.id, object]))
         onObjectsChange(objects.map((object) => replacements.get(object.id) ?? object))
       } else if (gesture.kind === 'draw' && valid) {
@@ -333,18 +374,20 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function renderObject(object: DrawingObject, preview = false) {
-    const [a, b] = object.points
+    const [a, b] = drawingPoints(object)
     const selected = selectedIds.includes(object.id) && !preview
     const showHandles = selected && selectedIds.length === 1 && tool !== 'vertices'
     const editingVertices = selected && tool === 'vertices'
     const box = objectBounds(object)
-    const width = box.width
-    const height = box.height
+    const local = objectLocalBounds(object)
+    const width = local.width
+    const height = local.height
     const label = ['rectangle', 'ellipse', 'polygon'].includes(object.type) ? `${formatMetres(width)} × ${formatMetres(height)} м`
       : `${formatMetres(Math.hypot(width, height))} м`
     const freeformPolygon = object.type === 'polygon' && (!object.shapeKind || object.shapeKind === 'polygon')
     return (
       <g key={object.id} data-object-id={preview ? undefined : object.id} data-object-type={object.type}
+        data-rotation={object.rotation ?? 0}
         data-preview={preview || undefined} data-selected={selected || undefined} pointerEvents={preview ? 'none' : undefined}>
         <DrawingShape object={object} stroke={selected ? 'var(--ttk-red)' : undefined} preview={preview} />
         {editingVertices && vertices(object).map((point, index) => <circle key={index} data-vertex-handle={index}
@@ -357,7 +400,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             fill={selected ? 'var(--ttk-red)' : 'var(--ttk-body)'} stroke="white" strokeWidth={1 / zoom} />
         ))}
         {(selected || preview || object.type === 'dimension' || object.label) && (!freeformPolygon || object.label) && (
-          <text x={(a.x + b.x) / 2} y={Math.min(a.y, b.y) - 10 / zoom} fontSize={12 / zoom}
+          <text x={(box.left + box.right) / 2} y={box.top - 10 / zoom} fontSize={12 / zoom}
             fill="var(--ttk-body)" textAnchor="middle" pointerEvents="none">
             {object.type === 'marker' || freeformPolygon ? object.label : <>{object.label ? `${object.label} · ` : ''}{label}</>}
           </text>
@@ -389,7 +432,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
           if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
         }}
         onDoubleClick={(event) => {
-          if (tool === 'polygon') return
+          if (tool === 'polygon' || (tool === 'select' && event.shiftKey) || (event.target as Element).closest('[data-rotation-handle]')) return
           const point = svgPoint(event as unknown as PointerEvent<SVGSVGElement>)
           const object = objects.find((item) => item.id === selectedId)
           if (tool === 'vertices' && object && canAddVertex(object) && !(event.target as Element).closest('[data-vertex-handle]')) {
@@ -446,6 +489,27 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         <g ref={contentRef} data-canvas-content transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
           {visibleObjects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
           {drafts.filter((draft) => draft.id === 'preview').map((draft) => renderObject(draft, true))}
+          {selectedObjects.length > 0 && tool !== 'vertices' && tool !== 'polygon' && !selectionBox && !drafts.some((draft) => draft.id === 'preview') && <g data-rotation-control
+            transform={`rotate(${rotationFrame.rotation} ${rotationFrame.center.x} ${rotationFrame.center.y})`}>
+            <rect data-rotation-frame x={rotationFrame.box.left} y={rotationFrame.box.top} width={rotationFrame.box.width} height={rotationFrame.box.height}
+              fill="none" stroke="var(--ttk-red)" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+            <line x1={rotationFrame.center.x} y1={rotationFrame.box.top} x2={rotationFrame.center.x} y2={rotationFrame.box.top - 24 / zoom}
+              stroke="var(--ttk-red)" strokeWidth="1" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+            <g data-rotation-handle role="button" aria-label={selectedObjects.length > 1 ? 'Повернуть выделенные объекты' : 'Повернуть объект'} tabIndex={0}
+              transform={`translate(${rotationFrame.center.x} ${rotationFrame.box.top - 36 / zoom}) scale(${1 / zoom}) rotate(${-rotationFrame.rotation})`}
+              style={{ cursor: rotationPreview ? 'grabbing' : 'grab' }}
+              onKeyDown={(event) => {
+                if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || event.ctrlKey || event.metaKey || event.altKey) return
+                event.preventDefault(); event.stopPropagation()
+                const delta = (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 15 : 1)
+                const rotated = new Map(selectedObjects.map((object) => [object.id, rotateDrawing(object, rotationFrame.center, delta)]))
+                onObjectsChange(objects.map((object) => rotated.get(object.id) ?? object))
+              }}>
+              <title>Перетащите для поворота. Shift — шаг 15°. Стрелки ← / → — поворот с клавиатуры.</title>
+              <circle r="12" fill="white" stroke="var(--ttk-red)" strokeWidth="1.5" />
+              <path d="M 5 -3 A 6 6 0 1 0 5 4 M 5 -7 V -2 H 0" fill="none" stroke="var(--ttk-red)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
+            </g>
+          </g>}
           {polygonPoints.length > 0 && <g data-polygon-construction>
             <polyline data-polygon-preview points={[...polygonPoints, ...(polygon.cursor ? [polygon.cursor] : [])].map((point) => `${point.x},${point.y}`).join(' ')}
               fill="none" stroke="var(--ttk-red)" strokeWidth="2" strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />

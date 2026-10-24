@@ -17,6 +17,7 @@ export interface DrawingObject {
   targetProjectId?: string
   status?: 'ready' | 'progress' | 'blocked'
   points: Point[]
+  rotation?: number
   strokeWidth?: number
   stroke?: string
   fill?: string

@@ -1,5 +1,5 @@
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
 
 interface CanvasEditorProps {
@@ -37,6 +37,7 @@ export default function CanvasEditor({
   const [startPoint, setStartPoint] = useState<Point>({ x: 0, y: 0 })
   const [currentPoint, setCurrentPoint] = useState<Point>({ x: 0, y: 0 })
   const [nextId, setNextId] = useState(objects.length)
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
 
   const svgPoint = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -52,6 +53,24 @@ export default function CanvasEditor({
     },
     []
   )
+
+  // Отслеживаем нажатую клавишу Ctrl глобально
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Control') setIsCtrlPressed(true)
+    }
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Control') setIsCtrlPressed(false)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [])
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
@@ -136,13 +155,16 @@ export default function CanvasEditor({
   )
 
   const handleWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
+    (event: React.WheelEvent<SVGSVGElement>) => {
+      // Масштаб меняется только при зажатом Ctrl и когда курсор над областью карты
+      if (!isCtrlPressed) return
+
       event.preventDefault()
       const delta = -event.deltaY * 0.001
       const newZoom = Math.min(4, Math.max(0.25, zoom + delta))
       onZoomChange(newZoom)
     },
-    [onZoomChange, zoom]
+    [isCtrlPressed, onZoomChange, zoom]
   )
 
   const previewObject = useMemo(() => {
@@ -184,16 +206,14 @@ export default function CanvasEditor({
   }, [isDrawing, tool, startPoint, currentPoint])
 
   return (
-    <div
-      className="relative w-full h-full bg-slate-50 overflow-hidden"
-      onWheel={handleWheel as unknown as React.WheelEventHandler<HTMLDivElement>}
-    >
+    <div className="relative w-full h-full bg-slate-50 overflow-hidden">
       <svg
         ref={svgRef}
         className="w-full h-full block"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
       >
         <defs>
           <pattern
@@ -202,13 +222,14 @@ export default function CanvasEditor({
             height={gridSize * zoom}
             patternUnits="userSpaceOnUse"
           >
+            {/* Верхняя и левая линии клетки — при повторении pattern получается ровная квадратная сетка */}
             <path
-              d="M 0 0 L 0 0"
+              d={`M 0 0 L ${gridSize * zoom} 0`}
               stroke={GRID_COLOR}
               strokeWidth="0.5"
             />
             <path
-              d={`M ${gridSize * zoom} 0 L 0 0 0 ${gridSize * zoom}`}
+              d={`M 0 0 L 0 ${gridSize * zoom}`}
               stroke={GRID_COLOR}
               strokeWidth="0.5"
             />

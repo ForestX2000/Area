@@ -174,6 +174,10 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
             <span className="text-sm font-medium text-ink">
               Редактор: {project?.name ?? 'Проект'}
             </span>
+            <Link to={`/projects/${projectId}/map?mode=2d`}
+              className="ml-auto rounded-lg border border-line px-3 py-2 text-sm text-body hover:bg-brand-soft hover:text-brand">
+              2D-карта и панорамы
+            </Link>
           </div>
 
           <div className="h-96 md:h-auto md:flex-1 min-h-0">

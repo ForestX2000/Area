@@ -1,117 +1,162 @@
+import { useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+    isActive
+      ? "bg-[#FCEBE7] text-[#E23E1A]"
+      : "text-[#4A4A4A] hover:bg-[#F5F5F5] hover:text-[#E23E1A]"
+  }`;
 
-function Header() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
+  function handleLogout() {
+    signOut();
+    setMenuOpen(false);
+    navigate("/login", { replace: true });
   }
+  const location = useLocation();
+  const isProjectsPage = location.pathname === "/";
+
+  const pageTitle = isProjectsPage
+    ? "Мои проекты"
+    : location.pathname === "/projects/new"
+      ? "Создание проекта"
+      : location.pathname.includes("/map")
+        ? "Карта пространства"
+        : "Проект";
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-200/60 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Бренд */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg shadow-sm">
-              К
+    <>
+      <header className="sticky top-0 z-40 border-b border-[#E5E5E5] bg-white">
+        <div className="flex min-h-[72px] items-center gap-3 px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
+            aria-expanded={menuOpen}
+            aria-controls="main-navigation"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#4A4A4A] transition hover:bg-[#FCEBE7] hover:text-[#E23E1A]"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              {menuOpen ? (
+                <path d="M18 6 6 18M6 6l12 12" />
+              ) : (
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+
+          <Link
+            to="/"
+            onClick={() => setMenuOpen(false)}
+            className="flex min-w-0 items-center gap-3"
+          >
+            <span className="truncate text-lg font-bold text-[#4A4A4A]">
+              ТТК карта пространств
+            </span>
+          </Link>
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-xs text-[#777777]">Рабочая область</p>
+              <p className="text-sm font-medium text-[#4A4A4A]">{pageTitle}</p>
             </div>
-            <div className="hidden sm:flex flex-col items-start">
-              <Link
-                to="/"
-                className="text-xl font-bold text-slate-900 tracking-tight hover:text-indigo-600 transition"
+
+            {isProjectsPage && (
+              <button
+                type="button"
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("space-map:toggle-project-form"),
+                  )
+                }
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#E23E1A] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#C93416] sm:px-4"
               >
-                Area
-              </Link>
-              <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                MVP
-              </span>
-            </div>
-          </div>
-
-          {/* Навигация */}
-          <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
-            <Link
-              to="/"
-              className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-            >
-              ▦ Проекты
-            </Link>
-            <Link
-              to="/projects/demo"
-              className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-            >
-              ⌖ Карта пространства
-            </Link>
-            <Link
-              to="/profile"
-              className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-            >
-              👤 Профиль
-            </Link>
-          </nav>
-
-          {/* Действия и пользователь */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/projects/new')}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition shadow-sm"
-            >
-              <span>+</span> Создать проект
-            </button>
-
-            {user ? (
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-sm font-medium text-slate-900">
-                    {user.name}
-                  </span>
-                  <Link
-                    to="/profile"
-                    className="text-xs text-slate-500 hover:text-indigo-600 transition"
+                <span className="text-lg leading-none">+</span>
+                <span className="hidden sm:inline">Создать проект</span>
+                {user && (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm font-semibold text-[#4A4A4A] transition hover:border-[#F2B8AA] hover:bg-[#FCEBE7] hover:text-[#E23E1A]"
                   >
-                    Профиль
-                  </Link>
-                </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 font-semibold text-sm shadow-sm">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:text-slate-900 transition"
-                >
-                  Выйти
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate('/auth')}
-                  className="hidden sm:px-4 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 transition"
-                >
-                  Войти
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/auth')}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-sm"
-                >
-                  Регистрация
-                </button>
-              </>
+                    <span className="hidden sm:inline">{user.name} · </span>
+                    Выйти
+                  </button>
+                )}
+              </button>
             )}
           </div>
         </div>
-      </div>
-    </header>
-  )
-}
+      </header>
 
-export default Header
+      {menuOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Закрыть меню"
+            onClick={() => setMenuOpen(false)}
+            className="fixed inset-0 z-40 cursor-default bg-black/20"
+          />
+
+          <nav
+            id="main-navigation"
+            aria-label="Главная навигация"
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(300px,85vw)] flex-col border-r border-[#E5E5E5] bg-white p-5 shadow-xl"
+          >
+            <div className="mb-6 flex items-center justify-between border-b border-[#E5E5E5] pb-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#E23E1A]">
+                  ТТК карта пространств
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Закрыть меню"
+                className="rounded-lg px-3 py-2 text-xl text-[#777777] hover:bg-[#F5F5F5] hover:text-[#E23E1A]"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <NavLink
+                to="/"
+                end
+                onClick={() => setMenuOpen(false)}
+                className={navClass}
+              >
+                <span aria-hidden="true">▦</span>
+                Мои проекты
+              </NavLink>
+
+              <NavLink
+                to="/projects/new"
+                onClick={() => setMenuOpen(false)}
+                className={navClass}
+              >
+                <span aria-hidden="true">＋</span>
+                Создать проект
+              </NavLink>
+            </div>
+          </nav>
+        </>
+      )}
+    </>
+  );
+}

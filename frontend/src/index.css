@@ -4,12 +4,23 @@
 
 :root {
   font-family: Inter, system-ui, Arial, sans-serif;
-  color: #1e293b;
-  background: #f8fafc;
+  color: #4A4A4A;
+  background: #F5F5F5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --ttk-red: #E23E1A;
+  --ttk-red-hover: #C93416;
+  --ttk-red-light: #FCEBE7;
+
+  --ttk-graphite: #4A4A4A;
+  --ttk-white: #FFFFFF;
+
+  --ttk-background: #F5F5F5;
+  --ttk-border: #E5E5E5;
+  --ttk-muted: #777777;
 }
 
 * {
@@ -20,8 +31,12 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--ttk-background);
+  color: var(--ttk-graphite);
 }
 
 button {
   font: inherit;
 }
+
+

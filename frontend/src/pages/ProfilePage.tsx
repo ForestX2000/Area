@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getProjects } from '../utils/projectStorage'
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, signOut } = useAuth()
   const navigate = useNavigate()
 
   const [editName, setEditName] = useState('')
@@ -129,7 +129,7 @@ export default function ProfilePage() {
           <div className="mt-8 pt-8 border-t border-slate-100">
             <button
               type="button"
-              onClick={logout}
+              onClick={signOut}
               className="w-full rounded-xl border border-red-200 px-5 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition"
             >
               Выйти из аккаунта

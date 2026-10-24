@@ -1,13 +1,13 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
-import { createDrawing, MAX_ZOOM, MIN_ZOOM, PIXELS_PER_METRE, pointToSegmentDistance, resizeDrawing, resizeHandles } from './drawingGeometry'
+import { createDrawing, intersectsSelection, MAX_ZOOM, MIN_ZOOM, PIXELS_PER_METRE, pointToSegmentDistance, resizeDrawing, resizeHandles } from './drawingGeometry'
 
 interface CanvasEditorProps {
   objects: DrawingObject[]
   onObjectsChange: (objects: DrawingObject[]) => void
-  selectedId: string | null
-  onSelect: (id: string | null) => void
+  selectedIds: string[]
+  onSelect: (ids: string[], activateSelectionTool?: boolean) => void
   tool: DrawingTool
   gridSize: number
   snapToGrid: boolean
@@ -18,25 +18,39 @@ interface CanvasEditorProps {
 type Gesture =
   | { kind: 'pan'; pointerId: number; start: Point; pan: Point }
   | { kind: 'draw'; pointerId: number; start: Point; tool: DrawingTool }
-  | { kind: 'move'; pointerId: number; start: Point; original: DrawingObject }
+  | { kind: 'move'; pointerId: number; start: Point; original: DrawingObject; originals: DrawingObject[] }
   | { kind: 'resize'; pointerId: number; start: Point; original: DrawingObject; handle: number }
+  | { kind: 'marquee'; pointerId: number; start: Point; previousSelection: string[] }
+
+interface ClickPoint {
+  x: number
+  y: number
+  time: number
+  selection: string[]
+}
 
 const formatMetres = (value: number) => (value / PIXELS_PER_METRE).toFixed(2)
 
-export default function CanvasEditor({ objects, onObjectsChange, selectedId, onSelect,
+export default function CanvasEditor({ objects, onObjectsChange, selectedIds, onSelect,
   tool, gridSize, snapToGrid, zoom, onZoomChange }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const contentRef = useRef<SVGGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
+  const lastClickRef = useRef<ClickPoint | null>(null)
+  const clickCandidateRef = useRef<(ClickPoint & { pointerId: number }) | null>(null)
   const viewportRef = useRef({ zoom, pan: { x: 0, y: 0 } })
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
-  const [draft, setDraft] = useState<DrawingObject | null>(null)
+  const [drafts, setDrafts] = useState<DrawingObject[]>([])
+  const [selectionBox, setSelectionBox] = useState<{ start: Point; end: Point } | null>(null)
   const [snapTarget, setSnapTarget] = useState<Point | null>(null)
   const [isPanning, setIsPanning] = useState(false)
   const patternId = useId().replace(/:/g, '')
   const cellSize = Math.max(0.1, gridSize) * PIXELS_PER_METRE
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
+  const draftsById = new Map(drafts.map((draft) => [draft.id, draft]))
 
   useLayoutEffect(() => { viewportRef.current.zoom = zoom }, [zoom])
+  useEffect(() => { lastClickRef.current = null }, [tool])
 
   useEffect(() => {
     const svg = svgRef.current
@@ -86,12 +100,12 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
     return { x: result.x, y: result.y }
   }
 
-  function resolvePoint(point: Point, shiftKey: boolean, excludedId?: string): Point {
+  function resolvePoint(point: Point, shiftKey: boolean, excludedIds: string[] = []): Point {
     let nearest: Point | null = null
     let distance = 14 / zoom
     if (shiftKey) {
       for (const object of objects) {
-        if (object.id === excludedId) continue
+        if (excludedIds.includes(object.id)) continue
         const [a, b] = object.points
         const corners = object.type === 'rectangle'
           ? [a, b, { x: a.x, y: b.y }, { x: b.x, y: a.y }] : [a, b]
@@ -123,6 +137,8 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
     event.preventDefault()
     event.currentTarget.focus({ preventScroll: true })
     if (event.button === 1) {
+      lastClickRef.current = null
+      clickCandidateRef.current = null
       gestureRef.current = { kind: 'pan', pointerId: event.pointerId,
         start: svgPoint(event, false), pan: { ...viewportRef.current.pan } }
       setIsPanning(true)
@@ -130,48 +146,79 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
       return
     }
     const point = svgPoint(event)
+    const previousClick = lastClickRef.current
+    lastClickRef.current = null
+    const doublePress = event.pointerType === 'mouse' && previousClick
+      && event.timeStamp - previousClick.time <= 500
+      && Math.hypot(event.clientX - previousClick.x, event.clientY - previousClick.y) <= 5
+    clickCandidateRef.current = event.pointerType === 'mouse' && !doublePress
+      ? { x: event.clientX, y: event.clientY, time: event.timeStamp, selection: selectedIds, pointerId: event.pointerId } : null
+    if (doublePress) {
+      gestureRef.current = { kind: 'marquee', pointerId: event.pointerId, start: point, previousSelection: previousClick.selection }
+      onSelect(selectedIds, true)
+      setSelectionBox({ start: point, end: point })
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     const handle = (event.target as Element).closest('[data-resize-handle]')
     const resized = handle ? objects.find((object) => object.id === selectedId) : undefined
     if (resized && handle) {
       gestureRef.current = { kind: 'resize', pointerId: event.pointerId, start: point,
         original: resized, handle: Number(handle.getAttribute('data-resize-handle')) }
-      setDraft(resized)
+      setDrafts([resized])
       event.currentTarget.setPointerCapture(event.pointerId)
       return
     }
     const original = tool === 'select' ? findObject(point) : undefined
-    if (tool === 'select') onSelect(original?.id ?? null)
+    const moveIds = original && selectedIds.includes(original.id) ? selectedIds : original ? [original.id] : []
+    if (tool === 'select') onSelect(moveIds)
     if (tool === 'select' && !original) return
     const start = original ? point : resolvePoint(point, event.shiftKey)
-    gestureRef.current = original ? { kind: 'move', pointerId: event.pointerId, start, original }
+    gestureRef.current = original ? { kind: 'move', pointerId: event.pointerId, start, original,
+      originals: objects.filter((object) => moveIds.includes(object.id)) }
       : { kind: 'draw', pointerId: event.pointerId, start, tool }
-    setDraft(original ?? createDrawing(tool, start, start, 'preview'))
+    setDrafts(original ? objects.filter((object) => moveIds.includes(object.id)) : [createDrawing(tool, start, start, 'preview')])
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  function updateGesture(event: PointerEvent<SVGSVGElement>): DrawingObject | null {
+  function updateGesture(event: PointerEvent<SVGSVGElement>): DrawingObject[] | null {
     const gesture = gestureRef.current
-    if (!gesture || gesture.pointerId !== event.pointerId || gesture.kind === 'pan') return null
+    if (!gesture || gesture.pointerId !== event.pointerId || gesture.kind === 'pan' || gesture.kind === 'marquee') return null
     const raw = svgPoint(event)
     if (gesture.kind === 'draw') {
       const end = resolvePoint(raw, event.shiftKey)
-      return createDrawing(gesture.tool, gesture.start, end, 'preview')
+      return [createDrawing(gesture.tool, gesture.start, end, 'preview')]
     }
     const original = gesture.original
-    if (Math.hypot(raw.x - gesture.start.x, raw.y - gesture.start.y) < 2 / zoom) return original
+    if (Math.hypot(raw.x - gesture.start.x, raw.y - gesture.start.y) < 2 / zoom) {
+      return gesture.kind === 'move' ? gesture.originals : [original]
+    }
     if (gesture.kind === 'resize') {
-      return resizeDrawing(original, gesture.handle, resolvePoint(raw, event.shiftKey, original.id))
+      return [resizeDrawing(original, gesture.handle, resolvePoint(raw, event.shiftKey, [original.id]))]
     }
     const anchor = original.points[0]
     const target = resolvePoint({ x: anchor.x + raw.x - gesture.start.x,
-      y: anchor.y + raw.y - gesture.start.y }, event.shiftKey, original.id)
-    return { ...original, points: original.points.map((point) => ({
+      y: anchor.y + raw.y - gesture.start.y }, event.shiftKey, gesture.originals.map((object) => object.id))
+    return gesture.originals.map((object) => ({ ...object, points: object.points.map((point) => ({
       x: point.x + target.x - anchor.x, y: point.y + target.y - anchor.y,
-    })) }
+    })) }))
+  }
+
+  function updateMarquee(event: PointerEvent<SVGSVGElement>) {
+    const gesture = gestureRef.current
+    if (gesture?.kind !== 'marquee' || gesture.pointerId !== event.pointerId) return
+    const end = svgPoint(event)
+    setSelectionBox({ start: gesture.start, end })
+    if (Math.hypot(end.x - gesture.start.x, end.y - gesture.start.y) > 3 / zoom) {
+      onSelect(objects.filter((object) => intersectsSelection(object, gesture.start, end)).map((object) => object.id))
+    }
   }
 
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
+    const candidate = clickCandidateRef.current
+    if (candidate && Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y) > 5) clickCandidateRef.current = null
     const gesture = gestureRef.current
+    if (gesture?.kind === 'marquee') { updateMarquee(event); return }
     if (gesture?.kind === 'pan' && gesture.pointerId === event.pointerId) {
       const point = svgPoint(event, false)
       const nextPan = { x: gesture.pan.x + point.x - gesture.start.x, y: gesture.pan.y + point.y - gesture.start.y }
@@ -180,30 +227,50 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
       return
     }
     const next = updateGesture(event)
-    if (next) setDraft(next)
+    if (next) setDrafts(next)
   }
 
-  function clearGesture() {
+  function clearGesture(cancelled = false) {
+    const gesture = gestureRef.current
+    if (cancelled && gesture?.kind === 'marquee') onSelect(gesture.previousSelection)
     gestureRef.current = null
-    setDraft(null)
+    clickCandidateRef.current = null
+    setDrafts([])
+    setSelectionBox(null)
     setSnapTarget(null)
     setIsPanning(false)
   }
 
   function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
+    const candidate = clickCandidateRef.current
+    if (candidate?.pointerId === event.pointerId && event.button === 0
+      && Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y) <= 5) {
+      lastClickRef.current = { x: event.clientX, y: event.clientY, time: event.timeStamp, selection: candidate.selection }
+    }
+    clickCandidateRef.current = null
     const gesture = gestureRef.current
     if (!gesture || gesture.pointerId !== event.pointerId) return
+    if (gesture.kind === 'marquee') {
+      updateMarquee(event)
+      const end = svgPoint(event)
+      if (Math.hypot(end.x - gesture.start.x, end.y - gesture.start.y) <= 3 / zoom) {
+        const object = findObject(end)
+        onSelect(object ? [object.id] : [])
+      }
+    }
     const next = updateGesture(event)
     if (next) {
-      const [a, b] = next.points
-      const valid = next.type === 'rectangle' ? Math.abs(a.x - b.x) > 0.01 && Math.abs(a.y - b.y) > 0.01
+      const [object] = next
+      const [a, b] = object.points
+      const valid = object.type === 'rectangle' ? Math.abs(a.x - b.x) > 0.01 && Math.abs(a.y - b.y) > 0.01
         : Math.hypot(a.x - b.x, a.y - b.y) > 0.01
       if (gesture.kind === 'move' || (gesture.kind === 'resize' && valid)) {
-        onObjectsChange(objects.map((object) => object.id === next.id ? next : object))
+        const replacements = new Map(next.map((object) => [object.id, object]))
+        onObjectsChange(objects.map((object) => replacements.get(object.id) ?? object))
       } else if (gesture.kind === 'draw' && valid) {
-        next.id = crypto.randomUUID()
-        onObjectsChange([...objects, next])
-        onSelect(next.id)
+        const created = { ...object, id: crypto.randomUUID() }
+        onObjectsChange([...objects, created])
+        onSelect([created.id])
       }
     }
     clearGesture()
@@ -212,14 +279,15 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
 
   function renderObject(object: DrawingObject, preview = false) {
     const [a, b] = object.points
-    const selected = object.id === selectedId && !preview
+    const selected = selectedIds.includes(object.id) && !preview
+    const showHandles = selected && selectedIds.length === 1
     const width = Math.abs(b.x - a.x)
     const height = Math.abs(b.y - a.y)
     const label = object.type === 'rectangle' ? `${formatMetres(width)} × ${formatMetres(height)} м`
       : `${formatMetres(Math.hypot(width, height))} м`
     return (
       <g key={object.id} data-object-id={preview ? undefined : object.id} data-object-type={object.type}
-        data-preview={preview || undefined} pointerEvents={preview ? 'none' : undefined}>
+        data-preview={preview || undefined} data-selected={selected || undefined} pointerEvents={preview ? 'none' : undefined}>
         {object.type === 'rectangle' ? (
           <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={width} height={height}
             fill={object.fill ?? 'transparent'} stroke={selected ? 'var(--ttk-red)' : object.stroke ?? 'var(--ttk-graphite)'}
@@ -230,10 +298,10 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
             stroke={selected ? 'var(--ttk-red)' : object.stroke ?? 'var(--ttk-graphite)'} strokeWidth={object.strokeWidth ?? 2}
             strokeDasharray={preview ? '4 4' : object.strokeDasharray} vectorEffect="non-scaling-stroke" />
         )}
-        {(selected || object.type === 'dimension') && (selected ? resizeHandles(object) : [a, b]).map((point, index) => (
-          <circle key={index} cx={point.x} cy={point.y} r={(selected ? 6 : 4) / zoom}
-            data-resize-handle={selected ? index : undefined}
-            style={selected ? { cursor: object.type !== 'rectangle' ? 'move' : index % 2 === 0 ? 'nwse-resize' : 'nesw-resize' } : undefined}
+        {(showHandles || object.type === 'dimension') && (showHandles ? resizeHandles(object) : [a, b]).map((point, index) => (
+          <circle key={index} cx={point.x} cy={point.y} r={(showHandles ? 6 : 4) / zoom}
+            data-resize-handle={showHandles ? index : undefined}
+            style={showHandles ? { cursor: object.type !== 'rectangle' ? 'move' : index % 2 === 0 ? 'nwse-resize' : 'nesw-resize' } : undefined}
             fill={selected ? 'var(--ttk-red)' : 'var(--ttk-body)'} stroke="white" strokeWidth={1 / zoom} />
         ))}
         {(selected || preview || object.type === 'dimension' || object.label) && (
@@ -264,11 +332,11 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
             event.preventDefault()
             event.stopPropagation()
             const gesture = gestureRef.current
-            clearGesture()
+            clearGesture(true)
             if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
           }
         }}
-        onPointerCancel={clearGesture} onLostPointerCapture={clearGesture}>
+        onPointerCancel={() => clearGesture(true)} onLostPointerCapture={() => clearGesture(true)}>
         <defs>
           <pattern id={`${patternId}-minor`} width={cellSize * zoom} height={cellSize * zoom}
             x={pan.x} y={pan.y} patternUnits="userSpaceOnUse">
@@ -282,8 +350,13 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedId, onS
         <rect width="100%" height="100%" fill={`url(#${patternId}-minor)`} />
         <rect width="100%" height="100%" fill={`url(#${patternId}-major)`} />
         <g ref={contentRef} data-canvas-content transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
-          {objects.map((object) => renderObject(draft?.id === object.id ? draft : object))}
-          {draft?.id === 'preview' && renderObject(draft, true)}
+          {objects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
+          {drafts.filter((draft) => draft.id === 'preview').map((draft) => renderObject(draft, true))}
+          {selectionBox && <rect data-selection-box
+            x={Math.min(selectionBox.start.x, selectionBox.end.x)} y={Math.min(selectionBox.start.y, selectionBox.end.y)}
+            width={Math.abs(selectionBox.end.x - selectionBox.start.x)} height={Math.abs(selectionBox.end.y - selectionBox.start.y)}
+            fill="var(--ttk-drawing-fill)" stroke="var(--ttk-red)" strokeWidth="1" strokeDasharray="5 3"
+            vectorEffect="non-scaling-stroke" pointerEvents="none" />}
           {snapTarget && <circle cx={snapTarget.x} cy={snapTarget.y} r={7 / zoom}
             fill="var(--ttk-red-hover)" stroke="white" strokeWidth={1.5 / zoom} pointerEvents="none" />}
         </g>

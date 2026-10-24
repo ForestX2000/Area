@@ -67,7 +67,7 @@ export default function EditorToolbar({
               onClick={() => onToolChange(t.id)}
               className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-lg border transition ${
                 tool === t.id
-                  ? 'border-brand-soft0 bg-brand-soft text-brand'
+                  ? 'border-brand bg-brand-soft text-brand'
                   : 'border-transparent text-body hover:bg-surface-muted hover:border-line-strong'
               }`}
               title={t.label}
@@ -117,7 +117,7 @@ export default function EditorToolbar({
               step="0.1"
               value={gridSize}
               onChange={(e) => onGridSizeChange(Math.min(100, Math.max(0.1, Number(e.target.value) || 0.1)))}
-              className="w-20 rounded-xl border border-line bg-surface-muted px-2 py-1.5 text-sm outline-none focus:border-brand-soft0 focus:bg-white"
+              className="w-20 rounded-xl border border-line bg-surface-muted px-2 py-1.5 text-sm outline-none focus:border-brand focus:bg-white"
             />
           </div>
         </div>
@@ -144,7 +144,7 @@ export default function EditorToolbar({
                 if (event.key === 'Enter') { commitZoom(); event.currentTarget.blur() }
                 if (event.key === 'Escape') setZoomInput(null)
               }}
-              className="w-20 rounded-xl border border-line bg-surface-muted px-2 py-1.5 text-sm outline-none focus:border-brand-soft0 focus:bg-white" />
+              className="w-20 rounded-xl border border-line bg-surface-muted px-2 py-1.5 text-sm outline-none focus:border-brand focus:bg-white" />
             %
           </label>
           <button
@@ -160,13 +160,14 @@ export default function EditorToolbar({
 
       <p className="text-xs text-muted">Ctrl + колесо над холстом — масштаб относительно курсора.</p>
       <p className="text-xs text-muted">Зажмите колесико или проведите двумя пальцами по тачпаду, чтобы переместить холст.</p>
+      <p className="text-xs text-muted">Двойной клик с удержанием левой кнопки — рамка выделения.</p>
 
       <div className="mt-3 pt-3 border-t border-line-soft">
         <span className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 block">
           Привязка
         </span>
         <div className="flex items-center gap-2 text-xs text-body">
-          <span className="flex h-2 w-2 items-center justify-center rounded-full bg-brand-soft0 text-white text-[8px] font-bold">
+          <span className="flex h-2 w-2 items-center justify-center rounded-full bg-brand text-white text-[8px] font-bold">
             ▪
           </span>
           <span>Shift — привязка к углам и концам линий</span>

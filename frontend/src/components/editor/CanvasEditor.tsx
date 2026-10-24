@@ -17,7 +17,7 @@ interface CanvasEditorProps {
 const GRID_COLOR = '#e2e8f0'
 const DIMENSION_COLOR = '#059669'
 const SNAP_COLOR = '#e11d48'
-const SNAP_RADIUS = 12
+const SNAP_RADIUS_PX = 14 // радиус привязки в экранахích пикселях
 
 function dist(p1: Point, p2: Point): number {
   return Math.hypot(p2.x - p1.x, p2.y - p1.y)
@@ -58,7 +58,7 @@ export default function CanvasEditor({
     []
   )
 
-  // Отслеживаем клавиши Ctrl и Shift
+  // Отслеживаем клавиши Ctrl и Shift глобально
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Control') setIsCtrlPressed(true)
@@ -78,7 +78,7 @@ export default function CanvasEditor({
     }
   }, [])
 
-  // Вычисляем все точки привязки объектов (углы прямоугольников, концы линий)
+  // Все точки привязки: углы прямоугольников и концы линий (в SVG-координатах)
   const snapPoints = useMemo(() => {
     const points: Point[] = []
     for (const obj of objects) {
@@ -91,22 +91,25 @@ export default function CanvasEditor({
         const x2 = Math.max(obj.points[0].x, obj.points[1].x)
         const y2 = Math.max(obj.points[0].y, obj.points[1].y)
         points.push(
-          { x: x1, y: y1 }, // левый верхний
-          { x: x2, y: y1 }, // правый верхний
-          { x: x1, y: y2 }, // левый нижний
-          { x: x2, y: y2 }  // правый нижний
+          { x: x1, y: y1 },
+          { x: x2, y: y1 },
+          { x: x1, y: y2 },
+          { x: x2, y: y2 }
         )
       }
     }
     return points
   }, [objects])
 
-  // Найти ближайшую точку привязки (если Shift зажат)
+  // Радиус привязки в SVG-координатах (уменьшается при зум-ин)
+  const snapRadiusSvg = SNAP_RADIUS_PX / zoom
+
+  // Найти ближайшую точку привязки (только если Shift зажат)
   const findSnapPoint = useCallback(
     (pt: Point): Point | null => {
       if (!isShiftPressed) return null
       let nearest: Point | null = null
-      let minDist = SNAP_RADIUS
+      let minDist = snapRadiusSvg
       for (const sp of snapPoints) {
         const d = dist(pt, sp)
         if (d < minDist) {
@@ -116,7 +119,19 @@ export default function CanvasEditor({
       }
       return nearest
     },
-    [isShiftPressed, snapPoints]
+    [isShiftPressed, snapPoints, snapRadiusSvg]
+  )
+
+  // Прилипание к сетке
+  const applyGridSnap = useCallback(
+    (pt: Point): Point => {
+      if (!snapToGrid) return pt
+      return {
+        x: Math.round(pt.x / gridSize) * gridSize,
+        y: Math.round(pt.y / gridSize) * gridSize,
+      }
+    },
+    [gridSize, snapToGrid]
   )
 
   const handleMouseDown = useCallback(
@@ -134,13 +149,13 @@ export default function CanvasEditor({
 
       const rawPt = svgPoint(event.clientX, event.clientY)
       const snapped = findSnapPoint(rawPt)
-      const pt = snapped ?? applySnap(rawPt, gridSize, snapToGrid)
+      const pt = snapped ?? applyGridSnap(rawPt)
       setSnapTarget(snapped)
       setStartPoint(pt)
       setCurrentPoint(pt)
       setIsDrawing(true)
     },
-    [tool, objects, gridSize, snapToGrid, onSelect, svgPoint, findSnapPoint]
+    [tool, objects, gridSize, snapToGrid, onSelect, svgPoint, findSnapPoint, applyGridSnap]
   )
 
   const handleMouseMove = useCallback(
@@ -148,19 +163,18 @@ export default function CanvasEditor({
       if (!isDrawing) return
       const rawPt = svgPoint(event.clientX, event.clientY)
       const snapped = findSnapPoint(rawPt)
-      const pt = snapped ?? applySnap(rawPt, gridSize, snapToGrid)
+      const pt = snapped ?? applyGridSnap(rawPt)
       setSnapTarget(snapped)
       setCurrentPoint(pt)
     },
-    [isDrawing, svgPoint, gridSize, snapToGrid, findSnapPoint]
+    [isDrawing, svgPoint, findSnapPoint, applyGridSnap]
   )
 
   const handleMouseUp = useCallback(
-    (_event: React.MouseEvent<SVGSVGElement>) => {
+    () => {
       if (!isDrawing) return
-      const rawPt = svgPoint(currentPoint.x, currentPoint.y)
-      const snapped = findSnapPoint(rawPt)
-      const end = snapped ?? applySnap(rawPt, gridSize, snapToGrid)
+      const snapped = findSnapPoint(currentPoint)
+      const end = snapped ?? applyGridSnap(currentPoint)
 
       let newObject: DrawingObject | null = null
       const newId = `obj-${nextId}`
@@ -179,7 +193,10 @@ export default function CanvasEditor({
         newObject = {
           id: newId,
           type: 'rectangle',
-          points: [{ x, y }, { x: x + Math.abs(end.x - startPoint.x), y: y + Math.abs(end.y - startPoint.y) }],
+          points: [
+            { x, y },
+            { x: x + Math.abs(end.x - startPoint.x), y: y + Math.abs(end.y - startPoint.y) },
+          ],
           stroke: '#1e293b',
           strokeWidth: 2,
           fill: 'rgba(37, 99, 235, 0.05)',
@@ -210,11 +227,12 @@ export default function CanvasEditor({
       setIsDrawing(false)
       setSnapTarget(null)
     },
-    [tool, startPoint, currentPoint, objects, nextId, onObjectsChange, onSelect, gridSize, snapToGrid, findSnapPoint]
+    [tool, startPoint, currentPoint, objects, nextId, onObjectsChange, onSelect, findSnapPoint, applyGridSnap]
   )
 
   const handleWheel = useCallback(
     (event: React.WheelEvent<SVGSVGElement>) => {
+      // Масштаб только при зажатом Ctrl и когда курсор над областью карты (SVG)
       if (!isCtrlPressed) return
 
       event.preventDefault()
@@ -280,6 +298,7 @@ export default function CanvasEditor({
             height={gridSize * zoom}
             patternUnits="userSpaceOnUse"
           >
+            {/* Верхняя и левая линии клетки → ровная квадратная сетка 1×1 */}
             <path
               d={`M 0 0 L ${gridSize * zoom} 0`}
               stroke={GRID_COLOR}
@@ -374,12 +393,12 @@ export default function CanvasEditor({
           </text>
         )}
 
-        {/* Индикатор привязки к точке (когда Shift зажат) */}
+        {/* Индикатор привязки к точке (красная точка под курсором)} */}
         {snapTarget && isShiftPressed && (
           <circle
             cx={snapTarget.x}
             cy={snapTarget.y}
-            r={SNAP_RADIUS / zoom}
+            r={SNAP_RADIUS_PX / zoom}
             fill={SNAP_COLOR}
             stroke="white"
             strokeWidth="1.5"
@@ -396,14 +415,6 @@ export default function CanvasEditor({
       )}
     </div>
   )
-}
-
-function applySnap(pt: Point, gridSize: number, snapToGrid: boolean): Point {
-  if (!snapToGrid) return pt
-  return {
-    x: Math.round(pt.x / gridSize) * gridSize,
-    y: Math.round(pt.y / gridSize) * gridSize,
-  }
 }
 
 function findObjectAt(

@@ -85,7 +85,7 @@ export default function EditorPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex flex-col md:flex-row h-screen overflow-hidden">
-        {/*Toolbar*/}
+        {/*Toolbar — только слева, кнопки на канвасе убраны*/}
         <aside className="hidden md:flex flex-col w-64">
           <EditorToolbar
             tool={tool}
@@ -99,7 +99,7 @@ export default function EditorPage() {
           />
         </aside>
 
-        {/*Canvas*/}
+        {/*Canvas — только область рисования*/}
         <div className="flex-1 min-w-0 relative">
           <div className="absolute top-4 left-4 z-10 flex items-center gap-3">
             <Link
@@ -112,60 +112,6 @@ export default function EditorPage() {
             <span className="text-sm font-medium text-slate-900">
               Редактор: {project?.name ?? 'Проект'}
             </span>
-          </div>
-
-          <div className="absolute top-4 right-4 z-10 flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const newObj: DrawingObject = {
-                  id: `obj-${Date.now()}`,
-                  type: 'rectangle',
-                  points: [
-                    { x: 100, y: 100 },
-                    { x: 200, y: 150 },
-                  ],
-                  stroke: '#1e293b',
-                  strokeWidth: 2,
-                  fill: 'rgba(37, 99, 235, 0.05)',
-                }
-                setObjects((prev) => {
-                  const next = [...prev, newObj]
-                  handleObjectsChange(next)
-                  return next
-                })
-                setSelectedId(newObj.id)
-              }}
-              className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm transition"
-              title="Добавить прямоугольник"
-            >
-              □
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const newObj: DrawingObject = {
-                  id: `obj-${Date.now()}`,
-                  type: 'line',
-                  points: [
-                    { x: 100, y: 100 },
-                    { x: 200, y: 100 },
-                  ],
-                  stroke: '#1e293b',
-                  strokeWidth: 2,
-                }
-                setObjects((prev) => {
-                  const next = [...prev, newObj]
-                  handleObjectsChange(next)
-                  return next
-                })
-                setSelectedId(newObj.id)
-              }}
-              className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm transition"
-              title="Добавить линию"
-            >
-              ─
-            </button>
           </div>
 
           <CanvasEditor

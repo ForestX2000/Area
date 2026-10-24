@@ -4,6 +4,8 @@ import type { DrawingTool } from '../../types/drawing'
 interface EditorToolbarProps {
   tool: DrawingTool
   onToolChange: (tool: DrawingTool) => void
+  gridSize: number
+  onGridSizeChange: (size: number) => void
   snapToGrid: boolean
   onSnapToggle: () => void
   zoom: number
@@ -26,6 +28,8 @@ const tools: Array<{
 export default function EditorToolbar({
   tool,
   onToolChange,
+  gridSize,
+  onGridSizeChange,
   snapToGrid,
   onSnapToggle,
   zoom,
@@ -72,7 +76,21 @@ export default function EditorToolbar({
             Прилипание к сетке
           </label>
         </div>
-
+        <div className="mt-2">
+          <label className="text-xs text-slate-500 block mb-1">Размер ячейки</label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">{gridSize} м</span>
+            <input
+              type="number"
+              min="0.1"
+              max="100"
+              step="0.1"
+              value={gridSize}
+              onChange={(e) => onGridSizeChange(Math.max(0.1, Number(e.target.value) || 0.1))}
+              className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:bg-white"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="mt-auto pt-3 border-t border-slate-100">

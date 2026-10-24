@@ -14,11 +14,10 @@ interface CanvasEditorProps {
   onZoomChange: (zoom: number) => void
 }
 
-const GRID_COLOR = '#94a3b8'
+const GRID_COLOR = '#e2e8f0'
 const DIMENSION_COLOR = '#059669'
 const SNAP_COLOR = '#e11d48'
 const SELECT_COLOR = '#2563eb'
-const MIN_SIZE = 5
 
 function dist(p1: Point, p2: Point): number {
   return Math.hypot(p2.x - p1.x, p2.y - p1.y)
@@ -193,15 +192,17 @@ export default function CanvasEditor({
 
       if (tool === 'select') {
         const pt = svgPoint(event.clientX, event.clientY)
-        const clicked = findObjectAtPoint(pt)
+        const snapped = findSnapPoint(pt)
+        const clickPt = snapped ?? pt
+        const clicked = findObjectAtPoint(clickPt)
         onSelect(clicked ? clicked.id : null)
+        setSnapTarget(snapped)
         setIsDrawing(false)
         setIsDragging(false)
-        setSnapTarget(null)
         return
       }
 
-      // Рисование нового объекта — только при реальном перетаскивании
+      // Рисование нового объекта
       const rawPt = svgPoint(event.clientX, event.clientY)
       const snapped = findSnapPoint(rawPt)
       const pt = snapped ?? applyGridSnap(rawPt)
@@ -211,7 +212,7 @@ export default function CanvasEditor({
       setIsDrawing(true)
       setIsDragging(false)
     },
-    [tool, selectedId, objectsRef, onSelect, svgPoint, findObjectAtPoint, findSnapPoint, applyGridSnap]
+    [tool, selectedId, onSelect, svgPoint, findSnapPoint, findObjectAtPoint, applyGridSnap]
   )
 
   const handleMouseMove = useCallback(
@@ -265,22 +266,12 @@ export default function CanvasEditor({
     }
 
     if (!isDrawing) return
-
-    // Не создаём объект если не было реального перетаскивания (размер слишком мал)
-    const w = Math.abs(currentPoint.x - startPoint.x)
-    const h = Math.abs(currentPoint.y - startPoint.y)
-    if (w < MIN_SIZE && h < MIN_SIZE) {
-      setIsDrawing(false)
-      setSnapTarget(null)
-      return
-    }
-
     const snapped = findSnapPoint(currentPoint)
     const end = snapped ?? applyGridSnap(currentPoint)
 
     const newId = `obj-${nextId}`
-    const finalW = Math.abs(end.x - startPoint.x)
-    const finalH = Math.abs(end.y - startPoint.y)
+    const w = Math.abs(end.x - startPoint.x)
+    const h = Math.abs(end.y - startPoint.y)
 
     let newObject: DrawingObject | null = null
 
@@ -298,15 +289,15 @@ export default function CanvasEditor({
       newObject = {
         id: newId,
         type: 'rectangle',
-        points: [{ x, y }, { x: x + finalW, y: y + finalH }],
+        points: [{ x, y }, { x: x + w, y: y + h }],
         stroke: '#1e293b',
         strokeWidth: 2,
         fill: 'rgba(37, 99, 235, 0.05)',
-        width: finalW,
-        height: finalH,
+        width: w,
+        height: h,
       }
     } else if (tool === 'square') {
-      const size = Math.min(finalW, finalH)
+      const size = Math.min(w, h)
       const dx = end.x >= startPoint.x ? size : -size
       const dy = end.y >= startPoint.y ? size : -size
       newObject = {
@@ -330,7 +321,7 @@ export default function CanvasEditor({
 
     setIsDrawing(false)
     setSnapTarget(null)
-  }, [tool, startPoint, currentPoint, nextId, objectsRef, onObjectsChange, onSelect, findSnapPoint, applyGridSnap, MIN_SIZE])
+  }, [tool, startPoint, currentPoint, nextId, onObjectsChange, onSelect, findSnapPoint, applyGridSnap])
 
   const handleWheel = useCallback(
     (event: React.WheelEvent<SVGSVGElement>) => {
@@ -378,7 +369,7 @@ export default function CanvasEditor({
   const selectedObj = objectsRef.current.find((o) => o.id === selectedId)
 
   return (
-    <div className="relative w-full h-full bg-white overflow-hidden">
+    <div className="relative w-full h-full bg-slate-50 overflow-hidden">
       <svg
         ref={svgRef}
         className="w-full h-full block"
@@ -397,12 +388,12 @@ export default function CanvasEditor({
             <path
               d={`M 0 0 L ${gridSize * zoom} 0`}
               stroke={GRID_COLOR}
-              strokeWidth="1"
+              strokeWidth="0.5"
             />
             <path
               d={`M 0 0 L 0 ${gridSize * zoom}`}
               stroke={GRID_COLOR}
-              strokeWidth="1"
+              strokeWidth="0.5"
             />
           </pattern>
         </defs>

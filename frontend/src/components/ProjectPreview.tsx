@@ -3,6 +3,8 @@ import type { DrawingObject } from '../types/drawing'
 import { getMapImage, getPanorama } from '../utils/mapStorage'
 import { getPoints } from '../utils/pointStorage'
 import DrawingShape from './editor/DrawingShape'
+import { floorStorageId, getFloor } from '../utils/floorStorage'
+import { useProjects } from '../utils/useProjects'
 
 interface ProjectPreviewProps {
   projectId: string
@@ -62,7 +64,14 @@ function DrawingPreview({ objects, name }: { objects: DrawingObject[]; name: str
   )
 }
 
-export default function ProjectPreview({ projectId, name, drawings = [], mode = 'content' }: ProjectPreviewProps) {
+export default function ProjectPreview(props: ProjectPreviewProps) {
+  const project = useProjects().find((project) => project.id === props.projectId)
+  const floor = project ? getFloor(project) : null
+  const storageId = floorStorageId(props.projectId, floor?.id ?? 'default')
+  return <FloorPreview key={`${storageId}:${props.mode}`} {...props} storageId={storageId} drawings={floor?.drawings ?? props.drawings} />
+}
+
+function FloorPreview({ storageId, name, drawings = [], mode = 'content' }: ProjectPreviewProps & { storageId: string }) {
   const [preview, setPreview] = useState<{ url: string; kind: PreviewKind } | null>(null)
 
   useEffect(() => {
@@ -85,15 +94,15 @@ export default function ProjectPreview({ projectId, name, drawings = [], mode = 
 
     async function load() {
       try {
-        for (const point of mode === 'map' ? [] : getPoints(projectId)) {
+        for (const point of mode === 'map' ? [] : getPoints(storageId)) {
           if (cancelled) return
-          if (await displayImage(await getPanorama(projectId, point.id), 'panorama')) return
+          if (await displayImage(await getPanorama(storageId, point.id), 'panorama')) return
         }
       } catch {
         // Continue with the plan or drawing if a panorama cannot be loaded.
       }
       try {
-        if (!cancelled) await displayImage(await getMapImage(projectId), 'plan')
+        if (!cancelled) await displayImage(await getMapImage(storageId), 'plan')
       } catch {
         // The saved drawing remains available when IndexedDB is unavailable.
       }
@@ -104,7 +113,7 @@ export default function ProjectPreview({ projectId, name, drawings = [], mode = 
       cancelled = true
       if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
-  }, [projectId, mode])
+  }, [storageId, mode])
 
   const objects = drawings.filter((object) => object.markerKind !== 'service' && object.points?.length >= 2
     && object.points.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y)))

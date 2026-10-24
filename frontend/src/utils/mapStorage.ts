@@ -2,6 +2,27 @@
 const DB_NAME = 'space-map-db'
 const STORE_NAME = 'map-images'
 
+export async function deleteFloorMedia(storageId: string, protectedStorageIds: string[] = []): Promise<void> {
+  const db = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    store.delete(storageId)
+    const prefix = `panorama:${storageId}:`
+    const protectedPrefixes = protectedStorageIds.map((id) => `panorama:${id}:`).filter((other) => other.startsWith(prefix))
+    const request = store.openKeyCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`))
+    request.onsuccess = () => {
+      const cursor = request.result
+      if (!cursor) return
+      if (!protectedPrefixes.some((other) => String(cursor.primaryKey).startsWith(other))) store.delete(cursor.primaryKey)
+      cursor.continue()
+    }
+    transaction.oncomplete = () => { db.close(); resolve() }
+    transaction.onerror = () => { db.close(); reject(transaction.error) }
+    transaction.onabort = () => { db.close(); reject(transaction.error) }
+  })
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1)

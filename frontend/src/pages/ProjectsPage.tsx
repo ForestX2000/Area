@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { createWorkspace, getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
+import { getFloors } from '../utils/floorStorage';
 import ProjectCard from "../components/ProjectCard";
 import type { Project } from "../types/project";
 import {
@@ -277,7 +278,7 @@ function ProjectsPage() {
                   name={project.name}
                   description={project.description}
                   buildingsCount={0}
-                  floorsCount={0}
+                  floorsCount={getFloors(project).length}
                   drawings={project.drawings}
                   onDelete={() => handleDelete(project.id)}
                 />

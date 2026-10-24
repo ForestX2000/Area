@@ -32,7 +32,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         <button type="button" disabled={!props.canUndo} onClick={props.onUndo} className={buttonClass}>Отменить · Ctrl + Z</button>
         <button type="button" disabled={!props.canRedo} onClick={props.onRedo} className={buttonClass}>Вернуть · Ctrl + Y</button>
       </div>
-      <p className="mt-3 text-xs leading-5 text-muted">Многоугольник — кликами по точкам, затем по первой. Ctrl + A — выделить всё.</p>
+      <p className="mt-3 text-xs leading-5 text-muted">Многоугольник — кликами по точкам, затем по первой. Shift + клик — несколько объектов. Ctrl + A — выделить всё.</p>
     </section>
     <section aria-label="Метки" className="border-t border-line pt-3">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Метки</h2>

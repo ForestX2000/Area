@@ -5,7 +5,7 @@ import CanvasEditor from '../components/editor/CanvasEditor'
 import EditorToolbar from '../components/editor/EditorToolbar'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
 import EditorNavigation from '../components/editor/EditorNavigation'
-import { addVertex, canAddVertex, canDeleteVertex, deleteVertex, objectBounds, objectName, scaleDrawing } from '../components/editor/drawingGeometry'
+import { addVertex, canAddVertex, canDeleteVertex, deleteVertex, objectLocalBounds, objectName, scaleDrawing } from '../components/editor/drawingGeometry'
 import type { DrawingObject, DrawingTool } from '../types/drawing'
 import { getProjects } from '../utils/projectStorage'
 import { getFloor, saveFloorDrawings } from '../utils/floorStorage'
@@ -130,7 +130,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
         if (object.id !== selectedId) return object
         let next = { ...object, ...updates }
         if (updates.width !== undefined || updates.height !== undefined) {
-          const box = objectBounds(object)
+          const box = objectLocalBounds(object)
           let width = updates.width ?? box.width
           let height = updates.height ?? box.height
           if (object.isSquare) width = height = updates.width ?? updates.height ?? width

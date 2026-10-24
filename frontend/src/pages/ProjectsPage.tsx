@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { createWorkspace, getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
 import { getFloors } from '../utils/floorStorage';
 import ProjectCard from "../components/ProjectCard";
+import { useConfirmation } from '../contexts/useConfirmation';
 import type { Project } from "../types/project";
 import {
   createProject,
@@ -11,6 +12,7 @@ import {
 } from "../utils/projectStorage";
 
 function ProjectsPage() {
+  const confirm = useConfirmation();
   const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<Project[]>(() => getProjects());
   const [workspaces, setWorkspaces] = useState(() => getWorkspaces(projects, false));
@@ -70,10 +72,10 @@ function ProjectsPage() {
     }
   }
 
-  function handleDelete(projectId: string) {
-    const confirmed = window.confirm(
-      "Ты уверена, что хочешь удалить этот проект? Это действие нельзя отменить.",
-    );
+  async function handleDelete(projectId: string) {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) return;
+    const confirmed = await confirm({ title: 'Удалить проект?', message: `Проект «${project.name}» будет удалён. Это действие нельзя отменить.` });
 
     if (!confirmed) return;
 
@@ -285,8 +287,8 @@ function ProjectsPage() {
               ))}
               {(filter === 'all' || filter === 'workspace') && workspaces.workspaces.map((workspace) => <ProjectCard key={`workspace-${workspace.id}`}
                 id={workspace.id} name={workspace.name} description={workspace.description || 'Общее пространство для карт и контейнеров.'} buildingsCount={0} floorsCount={0}
-                workspace={workspace} projects={projects} onDelete={() => {
-                  if (!window.confirm(`Удалить Workspace «${workspace.name}»? Карты останутся в проектах.`)) return;
+                workspace={workspace} projects={projects} onDelete={async () => {
+                  if (!await confirm({ title: 'Удалить Workspace?', message: `Workspace «${workspace.name}» будет удалён. Карты останутся в проектах.` })) return;
                   const remaining = workspaces.workspaces.filter((item) => item.id !== workspace.id);
                   const next = { ...workspaces, workspaces: remaining, activeId: workspaces.activeId === workspace.id ? remaining[0]?.id ?? '' : workspaces.activeId };
                   try { saveWorkspaces(next); setWorkspaces(next); } catch { setError('Не удалось удалить Workspace.'); }

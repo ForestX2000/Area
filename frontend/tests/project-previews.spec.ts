@@ -118,8 +118,8 @@ test('replacing the plan through the map updates the cover on returning to proje
 test('removing the plan removes the obsolete cover', async ({ page }) => {
   await page.goto('/projects/plan/map')
   await expect(page.getByRole('img', { name: 'План помещения' })).toBeVisible()
-  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Удалить план', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Удалить план?', exact: true }).getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(page.getByRole('img', { name: 'План помещения' })).toHaveCount(0)
   await home(page)
   const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'План', exact: true }) })

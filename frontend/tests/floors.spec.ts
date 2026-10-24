@@ -146,12 +146,14 @@ test('deletion requires confirmation, preserves other floors and persists after 
   await add(page)
   await draw(page, 'Эллипс')
   await openPicker(page)
-  page.once('dialog', (dialog) => dialog.dismiss())
   await picker(page).getByRole('button', { name: 'Удалить этаж', exact: true }).click()
+  const confirmation = page.getByRole('dialog', { name: 'Удалить этаж?', exact: true })
+  await expect(confirmation).toContainText('Этаж «2»')
+  await confirmation.getByRole('button', { name: 'Отмена', exact: true }).click()
   await expect(floorButton(page)).toHaveText('Этаж: 2▾')
   expect((await project(page)).floors).toHaveLength(2)
-  page.once('dialog', (dialog) => dialog.accept())
   await picker(page).getByRole('button', { name: 'Удалить этаж', exact: true }).click()
+  await confirmation.getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(floorButton(page)).toHaveText('Этаж: 1▾')
   await expect(canvas(page).locator('[data-object-id="legacy-room"]')).toBeVisible()
   await page.reload()
@@ -205,8 +207,8 @@ test('deleting the original floor cleans only its media and leaves later floor p
   }, secondId)
   await choose(page, '1')
   await openPicker(page)
-  page.once('dialog', (dialog) => dialog.accept())
   await picker(page).getByRole('button', { name: 'Удалить этаж', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Удалить этаж?', exact: true }).getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(floorButton(page)).toHaveText('Этаж: 2▾')
   const keys = await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db', 1); request.onsuccess = () => resolve(request.result) })
@@ -268,8 +270,8 @@ test('failed deletion leaves the floor and media intact; clicking outside saves 
     const original = Storage.prototype.setItem
     Storage.prototype.setItem = function (key, value) { if (key === 'space-map-projects') throw new DOMException('Full', 'QuotaExceededError'); original.call(this, key, value) }
   })
-  page.once('dialog', (dialog) => dialog.accept())
   await picker(page).getByRole('button', { name: 'Удалить этаж', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Удалить этаж?', exact: true }).getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(picker(page).getByRole('alert')).toContainText('Не удалось удалить этаж')
   expect((await project(page)).floors).toHaveLength(2)
   const exists = await page.evaluate(async () => {

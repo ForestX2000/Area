@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import PanoramaViewer from "../components/PanoramaViewer";
 import DrawingPlan from "../components/DrawingPlan";
 import EditorNavigation from "../components/editor/EditorNavigation";
+import { useConfirmation } from '../contexts/useConfirmation';
 import { getProjects } from "../utils/projectStorage";
 import { useProjectFloor } from '../utils/useProjects';
 import { floorStorageId, floorUrl, getFloor } from '../utils/floorStorage';
@@ -63,6 +64,7 @@ export default function ProjectMapPage() {
 }
 
 function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: string }) {
+  const confirm = useConfirmation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const storageId = floorStorageId(projectId ?? '', floorId);
@@ -281,9 +283,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
   async function handleImageDelete() {
     if (!projectId) return;
 
-    const confirmed = window.confirm(
-      "Удалить план и все точки с карты? Загруженные панорамы точек также могут остаться в хранилище.",
-    );
+    const confirmed = await confirm({ title: 'Удалить план?', message: 'План и все точки с карты будут удалены. Загруженные панорамы точек также могут остаться в хранилище.' });
 
     if (!confirmed) return;
 
@@ -373,7 +373,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
     if (!projectId || !selectedPointId) return;
 
     const pointId = selectedPointId;
-    const confirmed = window.confirm("Удалить эту точку и её панораму?");
+    const confirmed = await confirm({ title: 'Удалить точку?', message: 'Точка и её панорама будут удалены. Это действие нельзя отменить.' });
 
     if (!confirmed) return;
 
@@ -429,7 +429,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
   async function handlePanoramaDelete() {
     if (!projectId || !selectedPointId) return;
 
-    const confirmed = window.confirm("Удалить панораму этой точки?");
+    const confirmed = await confirm({ title: 'Удалить панораму?', message: 'Панорама этой точки будет удалена. Сама точка останется на карте.' });
     if (!confirmed) return;
 
     setSaving(true);

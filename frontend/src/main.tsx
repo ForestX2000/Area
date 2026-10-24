@@ -5,11 +5,14 @@ import App from "./App";
 
 import "./index.css";
 import { AuthProvider } from "./contexts/AuthContext";
+import ConfirmationProvider from "./components/ConfirmationProvider";
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
     <AuthProvider>
-      <App />
+      <ConfirmationProvider>
+        <App />
+      </ConfirmationProvider>
     </AuthProvider>
   </BrowserRouter>,
 );

@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Project } from '../../types/project'
+import { useConfirmation } from '../../contexts/useConfirmation'
 import { activateFloor, addFloor, getFloor, getFloors, removeFloor, renameFloor } from '../../utils/floorStorage'
 
 export default function FloorPicker({ project, mode = '2d' }: { project: Project; mode?: '2d' | '3d' }) {
+  const confirm = useConfirmation()
   const [params] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -93,7 +95,7 @@ export default function FloorPicker({ project, mode = '2d' }: { project: Project
           catch { setError('Не удалось добавить этаж. Проверьте доступное место в браузере.') }
         }} className="rounded-lg px-3 py-2 text-left text-sm text-brand hover:bg-brand-soft disabled:opacity-40">+ Добавить этаж</button>
         <button type="button" disabled={busy || floors.length <= 1} title={floors.length <= 1 ? 'Нельзя удалить единственный этаж' : `Удалить этаж ${active.name}`} onClick={async () => {
-          if (!window.confirm(`Удалить этаж «${active.name}» вместе с его чертежом, планом, метками и панорамами? Это действие нельзя отменить.`)) return
+          if (!await confirm({ title: 'Удалить этаж?', message: `Этаж «${active.name}» будет удалён вместе с его чертежом, планом, метками и панорамами. Это действие нельзя отменить.` })) return
           setBusy(true)
           try { const result = await removeFloor(project.id, active.id); goToFloor(result.activeId, result.cleanupFailed) }
           catch { setError('Не удалось удалить этаж. Проверьте доступное место в браузере.'); setBusy(false) }

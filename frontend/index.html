@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#DD2538" />
+    <title>ТТК — Карта пространств</title>
+    <script>
+      // Тема до первой отрисовки, чтобы не мигал светлый фон (логика повторяет utils/theme.ts).
+      try {
+        var saved = localStorage.getItem('space-map-theme');
+        var theme = saved === 'light' || saved === 'dark' ? saved
+          : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        if (theme === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#121313');
+      } catch (error) { /* Без хранилища остаётся светлая тема. */ }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

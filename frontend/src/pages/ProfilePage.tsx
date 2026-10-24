@@ -1,8 +1,9 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+
 import { getProjects } from '../utils/projectStorage'
+import { useAuth } from '../contexts/useAuth'
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth()

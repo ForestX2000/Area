@@ -5,7 +5,7 @@ import {
   createProject,
   getProjects,
   saveProjects,
-} from '../utils/projectStorage'
+} from "../utils/projectStorage";
 
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>(() => getProjects());
@@ -42,36 +42,36 @@ function ProjectsPage() {
     const updatedProjects = [...projects, newProject];
 
     try {
-      saveProjects(updatedProjects)
-      setProjects(updatedProjects)
+      saveProjects(updatedProjects);
+      setProjects(updatedProjects);
       setName("");
       setDescription("");
       setError("");
-      setIsFormOpen(false)
+      setIsFormOpen(false);
     } catch {
       setError(
-        'Не удалось сохранить проект. Проверь доступное место в браузере.',
-      )
+        "Не удалось сохранить проект. Проверь доступное место в браузере.",
+      );
     }
   }
 
   function handleDelete(projectId: string) {
     const confirmed = window.confirm(
-      'Ты уверена, что хочешь удалить этот проект? Это действие нельзя отменить.',
-    )
+      "Ты уверена, что хочешь удалить этот проект? Это действие нельзя отменить.",
+    );
 
-    if (!confirmed) return
+    if (!confirmed) return;
 
     const updatedProjects = projects.filter(
       (project) => project.id !== projectId,
-    )
+    );
 
     try {
-      saveProjects(updatedProjects)
-      setProjects(updatedProjects)
-      setError('')
+      saveProjects(updatedProjects);
+      setProjects(updatedProjects);
+      setError("");
     } catch {
-      setError('Не удалось удалить проект. Попробуй ещё раз.')
+      setError("Не удалось удалить проект. Попробуй ещё раз.");
     }
   }
 
@@ -102,21 +102,6 @@ function ProjectsPage() {
             </div>
 
             <div className="flex items-center gap-4 rounded-xl border border-[#E5E5E5] bg-white px-5 py-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#FCEBE7] text-[#E23E1A]">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                >
-                  <rect x="4" y="4" width="6" height="6" rx="1.5" />
-                  <rect x="14" y="4" width="6" height="6" rx="1.5" />
-                  <rect x="4" y="14" width="6" height="6" rx="1.5" />
-                  <rect x="14" y="14" width="6" height="6" rx="1.5" />
-                </svg>
-              </div>
               <div>
                 <p className="text-2xl font-bold leading-6 text-[#4A4A4A]">
                   {projects.length}
@@ -127,7 +112,7 @@ function ProjectsPage() {
           </div>
         </section>
 
-        {/* Сообщения об ошибках */}
+
         {error && (
           <div
             role="alert"
@@ -138,7 +123,6 @@ function ProjectsPage() {
           </div>
         )}
 
-        {/* Форма создания проекта */}
         {isFormOpen && (
           <section className="mb-9 overflow-hidden rounded-xl border border-[#E5E5E5] bg-white">
             <div className="border-b border-[#E5E5E5] px-5 py-5 sm:px-7">
@@ -213,7 +197,6 @@ function ProjectsPage() {
           </section>
         )}
 
-        {/* Проекты */}
         {projects.length === 0 ? (
           <section className="rounded-xl border border-dashed border-[#D0D0D0] bg-white px-6 py-16 text-center sm:py-20">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-[#FCEBE7] text-[#E23E1A]">
@@ -266,30 +249,11 @@ function ProjectsPage() {
                   key={project.id}
                   className="group min-w-0 overflow-hidden rounded-xl border border-[#E5E5E5] bg-white transition duration-200 hover:-translate-y-1 hover:border-[#F2B8AA] hover:shadow-lg hover:shadow-[#4A4A4A]/5"
                 >
-                  {/* Фирменная шапка карточки */}
                   <div className="relative flex h-28 items-center justify-center overflow-hidden bg-[#4A4A4A]">
                     <div className="absolute -right-6 -top-10 h-32 w-32 rounded-full border-[20px] border-white/5" />
                     <div className="absolute -bottom-12 -left-4 h-28 w-28 rounded-full border-[16px] border-[#E23E1A]/40" />
 
                     <div className="absolute left-0 top-0 h-full w-1 bg-[#E23E1A]" />
-
-                    <div className="relative flex h-14 w-14 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white backdrop-blur transition duration-200 group-hover:scale-105">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        className="h-7 w-7"
-                        aria-hidden="true"
-                      >
-                        <path d="M3 6.5 9 3l6 3 6-3v14.5L15 21l-6-3-6 3V6.5Z" />
-                        <path d="M9 3v15M15 6v15" />
-                      </svg>
-                    </div>
-
-                    <span className="absolute right-3 top-3 rounded-md border border-white/15 bg-black/10 px-3 py-1 text-[11px] font-medium text-white/90">
-                      ПРОЕКТ
-                    </span>
                   </div>
 
                   <div className="min-w-0 p-5">
@@ -302,9 +266,6 @@ function ProjectsPage() {
                     />
 
                     <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#E5E5E5] pt-4">
-                      <span className="text-xs text-[#777777]">
-                        Интерактивная карта
-                      </span>
                       <button
                         type="button"
                         onClick={() => handleDelete(project.id)}

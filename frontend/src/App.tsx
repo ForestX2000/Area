@@ -6,7 +6,8 @@ import ProjectPage from "./pages/ProjectPage";
 import ProjectMapPage from "./pages/ProjectMapPage";
 import EditorPage from "./pages/EditorPage";
 import LoginPage from "./pages/LoginPage";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/useAuth";
+
 
 function ProtectedRoute() {
   const { user } = useAuth();

@@ -1,6 +1,6 @@
 
 import type { DrawingObject } from '../../types/drawing'
-import { canAddVertex, canDeleteVertex, objectBounds, objectName, PIXELS_PER_METRE, vertices } from './drawingGeometry'
+import { canAddVertex, canDeleteVertex, objectLocalBounds, objectName, PIXELS_PER_METRE, vertices } from './drawingGeometry'
 import { getProjects } from '../../utils/projectStorage'
 
 interface PropertiesPanelProps {
@@ -25,7 +25,7 @@ export default function PropertiesPanel({
     return (
       <div className="flex flex-col gap-4 border-l border-line bg-white p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-ink" role="status">Выделено объектов: {selectionCount}</h3>
-        <p className="text-sm text-muted">Перетащите любую выделенную фигуру инструментом «Выделение», чтобы переместить всю группу.</p>
+        <p className="text-sm text-muted">Перетащите любую выделенную фигуру, чтобы переместить группу. Маркер над рамкой поворачивает её вокруг общего центра.</p>
         <button type="button" onClick={onDelete} title="Удалить выбранные · Delete" aria-keyshortcuts="Delete"
           className="w-full rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-hover hover:bg-brand-soft transition">
           Удалить выбранные
@@ -48,7 +48,7 @@ export default function PropertiesPanel({
     )
   }
 
-  const box = objectBounds(selected)
+  const box = objectLocalBounds(selected)
   const width = box.width / PIXELS_PER_METRE
   const height = box.height / PIXELS_PER_METRE
 

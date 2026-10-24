@@ -117,6 +117,18 @@ export default function EditorToolbar({
           </button>
         </div>
       </div>
+
+      <div className="mt-3 pt-3 border-t border-slate-100">
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
+          Привязка
+        </span>
+        <div className="flex items-center gap-2 text-xs text-slate-600">
+          <span className="flex h-2 w-2 items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold">
+            ▪
+          </span>
+          <span>Shift — привязка к углам и концам линий</span>
+        </div>
+      </div>
     </div>
   )
 }

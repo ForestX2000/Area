@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import ProjectCard from "../components/ProjectCard";
 import type { Project } from "../types/project";
 import {
@@ -101,12 +102,15 @@ function ProjectsPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 rounded-xl border border-line bg-white px-5 py-4">
-              <div>
-                <p className="text-2xl font-bold leading-6 text-body">
-                  {projects.length}
-                </p>
-                <p className="mt-1 text-xs text-muted">{projectWord}</p>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link to="/workspace" className="rounded-lg bg-brand px-4 py-2.5 text-white transition hover:bg-brand-hover">2D Workspace</Link>
+              <div className="flex items-center gap-4 rounded-xl border border-line bg-white px-5 py-4">
+                <div>
+                  <p className="text-2xl font-bold leading-6 text-body">
+                    {projects.length}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">{projectWord}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -252,6 +256,7 @@ function ProjectsPage() {
                   description={project.description}
                   buildingsCount={0}
                   floorsCount={0}
+                  drawings={project.drawings}
                   onDelete={() => handleDelete(project.id)}
                 />
               ))}

@@ -5,6 +5,7 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectPage from "./pages/ProjectPage";
 import ProjectMapPage from "./pages/ProjectMapPage";
 import EditorPage from "./pages/EditorPage";
+import WorkspacePage from "./pages/WorkspacePage";
 import LoginPage from "./pages/LoginPage";
 import { useAuth } from "./contexts/useAuth";
 
@@ -45,6 +46,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/" element={<ProjectsPage />} />
+          <Route path="/workspace" element={<WorkspacePage />} />
           <Route path="/projects/new" element={<NewProjectPage />} />
           <Route path="/projects/:projectId" element={<ProjectPage />} />
           <Route path="/projects/:projectId/map" element={<ProjectMapPage />} />

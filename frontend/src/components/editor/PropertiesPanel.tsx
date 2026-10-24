@@ -20,7 +20,7 @@ export default function PropertiesPanel({
       <div className="flex flex-col gap-4 border-l border-line bg-white p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-ink" role="status">Выделено объектов: {selectionCount}</h3>
         <p className="text-sm text-muted">Перетащите любую выделенную фигуру инструментом «Выделение», чтобы переместить всю группу.</p>
-        <button type="button" onClick={onDelete}
+        <button type="button" onClick={onDelete} title="Удалить выбранные · Delete" aria-keyshortcuts="Delete"
           className="w-full rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-hover hover:bg-brand-soft transition">
           Удалить выбранные
         </button>
@@ -124,6 +124,8 @@ export default function PropertiesPanel({
         <button
           type="button"
           onClick={onDelete}
+          title="Удалить объект · Delete"
+          aria-keyshortcuts="Delete"
           className="w-full rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-hover hover:bg-brand-soft transition"
         >
           Удалить объект

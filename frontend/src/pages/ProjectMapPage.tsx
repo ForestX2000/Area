@@ -1,9 +1,12 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import PanoramaViewer from "../components/PanoramaViewer";
+import DrawingPlan from "../components/DrawingPlan";
+import { getProjects } from "../utils/projectStorage";
+import { useObjectUrl } from "../utils/useObjectUrl";
 import type {
   MapPoint,
   MapPointCategory,
@@ -49,8 +52,17 @@ function getCategoryIcon(category?: MapPointCategory) {
 
 export default function ProjectMapPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  return <ProjectMap key={projectId} projectId={projectId} />;
+}
 
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+function ProjectMap({ projectId }: { projectId?: string }) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [openIn2D] = useState(() => searchParams.get("mode") === "2d");
+  const [drawings] = useState(() => (getProjects().find((project) => project.id === projectId)?.drawings ?? [])
+    .filter((object) => object.points?.length >= 2 && object.points.slice(0, 2)
+      .every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))));
+  const [imageUrl, replaceImage] = useObjectUrl();
   const [imageName, setImageName] = useState("");
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
@@ -60,10 +72,13 @@ export default function ProjectMapPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
-  const [panoramaUrl, setPanoramaUrl] = useState<string | null>(null);
+  const [panoramaUrl, replacePanorama] = useObjectUrl();
   const [panoramaName, setPanoramaName] = useState("");
   const [panoramaLoading, setPanoramaLoading] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [panoramaIds, setPanoramaIds] = useState<string[]>([]);
+  const requestedPanorama = useRef<string | null>(null);
+  const hasPlan = !!imageUrl || drawings.length > 0;
 
   const selectedPoint =
     points.find((point) => point.id === selectedPointId) ?? null;
@@ -83,12 +98,15 @@ export default function ProjectMapPage() {
   // Загружаем план и точки проекта.
   useEffect(() => {
     let cancelled = false;
-    let loadedImageUrl: string | null = null;
 
     async function loadProjectMap() {
       if (!projectId) {
         setError("Не указан ID проекта.");
         setLoading(false);
+        return;
+      }
+      if (!getProjects().some((project) => project.id === projectId)) {
+        navigate(`/projects/${projectId}`, { replace: true });
         return;
       }
 
@@ -106,16 +124,30 @@ export default function ProjectMapPage() {
         setPoints(savedPoints);
 
         if (savedImage) {
-          loadedImageUrl = URL.createObjectURL(savedImage);
-          setImageUrl(loadedImageUrl);
+          replaceImage(savedImage);
           setImageName(
             savedImage instanceof File && savedImage.name
               ? savedImage.name
               : "План помещения",
           );
         } else {
-          setImageUrl(null);
+          replaceImage();
           setImageName("");
+        }
+
+        // Check actual files; older points may not have panoramaKey metadata.
+        const available = await Promise.all(savedPoints.map(async (point) =>
+          (await getPanorama(projectId, point.id)) ? point.id : null));
+        if (cancelled) return;
+        const ids = available.filter((id): id is string => id !== null);
+        setPanoramaIds(ids);
+        if (!savedImage && drawings.length === 0 && ids.length === 0 && !openIn2D) {
+          navigate(`/projects/${projectId}/editor`, { replace: true });
+          return;
+        }
+        if (ids.length > 0 && !openIn2D) {
+          requestedPanorama.current = ids[0];
+          setSelectedPointId(ids[0]);
         }
       } catch {
         if (!cancelled) {
@@ -130,21 +162,16 @@ export default function ProjectMapPage() {
 
     return () => {
       cancelled = true;
-      if (loadedImageUrl) URL.revokeObjectURL(loadedImageUrl);
     };
-  }, [projectId]);
+  }, [projectId, navigate, openIn2D, drawings, replaceImage]);
 
   // Загружаем панораму выбранной точки.
   useEffect(() => {
     let cancelled = false;
-    let loadedPanoramaUrl: string | null = null;
 
     async function loadSelectedPanorama() {
       if (!projectId || !selectedPointId) {
-        setPanoramaUrl((previousUrl) => {
-          if (previousUrl) URL.revokeObjectURL(previousUrl);
-          return null;
-        });
+        replacePanorama();
         setPanoramaName("");
         setPanoramaLoading(false);
         return;
@@ -152,10 +179,7 @@ export default function ProjectMapPage() {
 
       setPanoramaLoading(true);
 
-      setPanoramaUrl((previousUrl) => {
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        return null;
-      });
+      replacePanorama();
 
       setPanoramaName("");
       setViewerOpen(false);
@@ -166,11 +190,14 @@ export default function ProjectMapPage() {
         if (cancelled) return;
 
         if (file) {
-          loadedPanoramaUrl = URL.createObjectURL(file);
-          setPanoramaUrl(loadedPanoramaUrl);
+          replacePanorama(file);
           setPanoramaName(
             file instanceof File && file.name ? file.name : "Панорама",
           );
+          if (requestedPanorama.current === selectedPointId) {
+            requestedPanorama.current = null;
+            setViewerOpen(true);
+          }
         }
       } catch {
         if (!cancelled) {
@@ -185,9 +212,17 @@ export default function ProjectMapPage() {
 
     return () => {
       cancelled = true;
-      if (loadedPanoramaUrl) URL.revokeObjectURL(loadedPanoramaUrl);
     };
-  }, [projectId, selectedPointId]);
+  }, [projectId, selectedPointId, replacePanorama]);
+
+  function openPanorama(id: string) {
+    if (id === selectedPointId && panoramaUrl) {
+      setViewerOpen(true);
+    } else {
+      requestedPanorama.current = id;
+      setSelectedPointId(id);
+    }
+  }
 
   function persistPoints(updatedPoints: MapPoint[]) {
     if (!projectId) return;
@@ -220,10 +255,7 @@ export default function ProjectMapPage() {
     try {
       await saveMapImage(projectId, file);
 
-      setImageUrl((previousUrl) => {
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        return URL.createObjectURL(file);
-      });
+      replaceImage(file);
 
       setImageName(file.name);
     } catch {
@@ -249,13 +281,11 @@ export default function ProjectMapPage() {
     try {
       await deleteMapImage(projectId);
 
-      setImageUrl((previousUrl) => {
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        return null;
-      });
+      replaceImage();
 
       setImageName("");
       persistPoints([]);
+      setPanoramaIds([]);
       setSelectedPointId(null);
       setViewerOpen(false);
     } catch {
@@ -267,7 +297,7 @@ export default function ProjectMapPage() {
 
   // Добавляем точку кликом по плану.
   function handleMapClick(event: MouseEvent<HTMLDivElement>) {
-    if (!projectId || !imageUrl || saving) return;
+    if (!projectId || !hasPlan || saving) return;
 
     const bounds = event.currentTarget.getBoundingClientRect();
 
@@ -342,6 +372,7 @@ export default function ProjectMapPage() {
       await deletePanorama(projectId, pointId);
 
       persistPoints(points.filter((point) => point.id !== pointId));
+      setPanoramaIds((ids) => ids.filter((id) => id !== pointId));
       setSelectedPointId(null);
       setViewerOpen(false);
     } catch {
@@ -369,12 +400,11 @@ export default function ProjectMapPage() {
     try {
       await savePanorama(projectId, selectedPointId, file);
 
-      setPanoramaUrl((previousUrl) => {
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        return URL.createObjectURL(file);
-      });
+      replacePanorama(file);
 
       setPanoramaName(file.name);
+      setPanoramaIds((ids) => ids.includes(selectedPointId) ? ids : [...ids, selectedPointId]);
+      updateSelectedPoint({ panoramaKey: `panorama:${projectId}:${selectedPointId}` });
       setViewerOpen(false);
     } catch {
       setError("Не удалось сохранить панораму.");
@@ -396,12 +426,11 @@ export default function ProjectMapPage() {
     try {
       await deletePanorama(projectId, selectedPointId);
 
-      setPanoramaUrl((previousUrl) => {
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        return null;
-      });
+      replacePanorama();
 
       setPanoramaName("");
+      setPanoramaIds((ids) => ids.filter((id) => id !== selectedPointId));
+      updateSelectedPoint({ panoramaKey: undefined });
       setViewerOpen(false);
     } catch {
       setError("Не удалось удалить панораму.");
@@ -441,7 +470,7 @@ export default function ProjectMapPage() {
                 ▧
               </span>
               <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand">
-                Space Map / Editor
+                2D · Карта пространства
               </span>
             </div>
 
@@ -467,6 +496,20 @@ export default function ProjectMapPage() {
             />
           </label>
         </div>
+        <nav aria-label="Режим карты" className="mt-5 flex flex-wrap items-center gap-3">
+          <button type="button" aria-pressed={!viewerOpen}
+            className="rounded-lg border border-brand-border bg-brand-soft px-4 py-2 text-brand"
+            onClick={() => setViewerOpen(false)}>2D · Карта</button>
+          <button type="button" disabled={panoramaIds.length === 0 || panoramaLoading}
+            className="rounded-lg border border-line bg-white px-4 py-2 text-body enabled:hover:bg-brand-soft disabled:opacity-40"
+            onClick={() => openPanorama(selectedPointId && panoramaIds.includes(selectedPointId) ? selectedPointId : panoramaIds[0])}>
+            3D · Панорама
+          </button>
+          <Link to={`/projects/${projectId}/editor`}
+            className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">Редактировать чертёж</Link>
+          <Link to="/workspace" className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">2D Workspace</Link>
+          {panoramaIds.length === 0 && <span className="text-xs text-muted">Добавьте точку на карте и загрузите для неё панораму 360°.</span>}
+        </nav>
       </header>
 
       {error && (
@@ -505,7 +548,7 @@ export default function ProjectMapPage() {
               <div className="min-w-0">
                 <h2 className="font-semibold">План помещения</h2>
                 <p className="mt-1 break-all text-xs text-muted">
-                  {imageName || "Изображение ещё не загружено"}
+                  {imageName || (drawings.length > 0 ? "Сохранённый 2D-чертёж" : "Изображение ещё не загружено")}
                 </p>
               </div>
             </div>
@@ -522,7 +565,7 @@ export default function ProjectMapPage() {
             )}
           </div>
 
-          {imageUrl && (
+          {hasPlan && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft bg-page px-5 py-3 sm:px-6">
               <p className="text-sm text-muted">
                 <span className="mr-2 inline-block h-2 w-2 rounded-full bg-brand" />
@@ -535,18 +578,17 @@ export default function ProjectMapPage() {
           )}
 
           <div className="p-4 sm:p-6">
-            {imageUrl ? (
+            {hasPlan ? (
               <div className="overflow-hidden rounded-xl border border-line bg-page p-2 sm:p-4">
                 <div
                   className="relative mx-auto w-full cursor-crosshair overflow-hidden rounded-lg bg-white shadow-sm"
                   onClick={handleMapClick}
                 >
-                  <img
-                    src={imageUrl}
-                    alt="План помещения"
-                    className="block h-auto w-full select-none"
-                    draggable={false}
-                  />
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="План помещения" className="block h-auto w-full select-none" draggable={false} />
+                  ) : (
+                    <DrawingPlan objects={drawings} label="План помещения" />
+                  )}
 
                   {points.map((point, index) => {
                     const selected = selectedPointId === point.id;
@@ -603,11 +645,14 @@ export default function ProjectMapPage() {
                 <p className="mt-3 text-xs text-muted">
                   Поддерживаются файлы изображений
                 </p>
+                <Link to={`/projects/${projectId}/editor`} className="mt-4 text-sm font-medium text-brand hover:text-brand-hover">
+                  Нарисовать план в 2D-редакторе
+                </Link>
               </div>
             )}
           </div>
 
-          {imageUrl && (
+          {hasPlan && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-5 py-4 text-xs text-muted sm:px-6">
               <span>Выбери маркер, чтобы редактировать объект</span>
               <span>Изменения сохраняются автоматически</span>
@@ -664,7 +709,7 @@ export default function ProjectMapPage() {
                 </div>
                 <p className="text-sm font-medium">Пока нет объектов</p>
                 <p className="mx-auto mt-2 max-w-[230px] text-xs leading-5 text-muted">
-                  {imageUrl
+                  {hasPlan
                     ? "Нажми на план, чтобы добавить первую точку."
                     : "Сначала загрузи план помещения."}
                 </p>
@@ -708,7 +753,7 @@ export default function ProjectMapPage() {
                           <span className="mt-1 block truncate text-xs text-muted">
                             {getCategoryIcon(point.category)}{" "}
                             {getCategoryLabel(point.category)}
-                            {point.panoramaKey ? " · Панорама" : ""}
+                            {panoramaIds.includes(point.id) ? " · Панорама" : ""}
                           </span>
                         </span>
 
@@ -788,7 +833,7 @@ export default function ProjectMapPage() {
                     <div>
                       <h3 className="text-sm font-semibold">Панорама</h3>
                       <p className="mt-1 text-xs text-muted">
-                        Изображение, связанное с этой точкой
+                        Сферическое фото 360° в формате 2:1
                       </p>
                     </div>
                   </div>
@@ -833,7 +878,7 @@ export default function ProjectMapPage() {
                         Панорама не добавлена
                       </p>
                       <p className="mt-1 text-xs leading-5 text-muted">
-                        Загрузи изображение, чтобы связать его с этой точкой.
+                        Загрузи сферическое фото 360°, чтобы связать его с этой точкой.
                       </p>
                     </div>
                   )}
@@ -881,8 +926,12 @@ export default function ProjectMapPage() {
 
       {viewerOpen && panoramaUrl && selectedPoint && (
         <PanoramaViewer
+          key={panoramaUrl}
           imageUrl={panoramaUrl}
           title={selectedPoint.title}
+          pointId={selectedPoint.id}
+          panoramas={points.filter((point) => panoramaIds.includes(point.id))}
+          onSelectPanorama={openPanorama}
           onClose={() => setViewerOpen(false)}
         />
       )}

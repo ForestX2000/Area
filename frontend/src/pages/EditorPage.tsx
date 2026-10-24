@@ -12,9 +12,10 @@ export default function EditorPage() {
   const [objects, setObjects] = useState<DrawingObject[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tool, setTool] = useState<DrawingTool>('select')
-  const [gridSize, setGridSize] = useState(0.1)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [zoom, setZoom] = useState(1)
+
+  const GRID_SIZE = 50 // фиксированный размер ячейки сетки
 
   const project = projectId
     ? getProjects().find((p) => p.id === projectId)
@@ -90,8 +91,6 @@ export default function EditorPage() {
           <EditorToolbar
             tool={tool}
             onToolChange={setTool}
-            gridSize={gridSize}
-            onGridSizeChange={setGridSize}
             snapToGrid={snapToGrid}
             onSnapToggle={() => setSnapToGrid((prev) => !prev)}
             zoom={zoom}
@@ -120,7 +119,7 @@ export default function EditorPage() {
             selectedId={selectedId}
             onSelect={handleSelect}
             tool={tool}
-            gridSize={gridSize}
+            gridSize={GRID_SIZE}
             snapToGrid={snapToGrid}
             zoom={zoom}
             onZoomChange={setZoom}

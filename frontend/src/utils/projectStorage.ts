@@ -19,6 +19,7 @@ export function getProjects(): Project[] {
 
 export function saveProjects(projects: Project[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+  window.dispatchEvent(new Event('space-map:projects-changed'))
 }
 
 export function createProject(

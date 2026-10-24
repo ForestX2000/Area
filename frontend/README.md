@@ -1,7 +1,3 @@
-<<<<<<< Updated upstream
-https://company.ttk.ru/logo/ 
-# цвета и стилистика сайта которую нужно придерживатся 
-=======
 # Frontend Area
 
 React 19, TypeScript, Vite и Tailwind CSS. Интерфейс оформлен в палитре ТТК.
@@ -258,4 +254,3 @@ npm.cmd run test:e2e
 $env:PLAYWRIGHT_CHANNEL = 'msedge'
 npm.cmd run test:e2e
 ```
->>>>>>> Stashed changes

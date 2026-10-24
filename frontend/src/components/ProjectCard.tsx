@@ -1,11 +1,8 @@
 import { Link } from "react-router-dom";
-<<<<<<< Updated upstream
-=======
 import ProjectPreview from "./ProjectPreview";
 import type { DrawingObject } from "../types/drawing";
 import type { Workspace } from "../types/workspace";
 import type { Project } from "../types/project";
->>>>>>> Stashed changes
 
 type ProjectCardProps = {
   id: string;
@@ -13,15 +10,12 @@ type ProjectCardProps = {
   description: string;
   buildingsCount: number;
   floorsCount: number;
-<<<<<<< Updated upstream
-=======
   drawings?: DrawingObject[];
   onDelete?: () => void;
   workspace?: Workspace;
   projects?: Project[];
   /** Просмотры карты за последние 30 дней и доля от всех просмотров карт. */
   stats?: { views: number; share: number };
->>>>>>> Stashed changes
 };
 
 function ProjectCard({
@@ -30,27 +24,6 @@ function ProjectCard({
   description,
   buildingsCount,
   floorsCount,
-<<<<<<< Updated upstream
-}: ProjectCardProps) {
-  return (
-    <article className="project-card overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#F2B8AA] hover:shadow-lg">
-      <div className="project-preview relative flex min-h-36 items-center justify-center bg-[#FCEBE7]">
-        <span className="preview-icon text-5xl text-[#E23E1A]" aria-hidden="true">
-          ⌖
-        </span>
-
-        <span className="project-badge absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#E23E1A]">
-          Проект
-        </span>
-      </div>
-
-      <div className="project-info p-5">
-        <h3 className="break-words text-lg font-bold text-[#4A4A4A]">
-          {name}
-        </h3>
-
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#777777]">
-=======
   drawings,
   onDelete,
   workspace, projects = [], stats,
@@ -74,37 +47,20 @@ function ProjectCard({
         </h3>
 
         <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">
->>>>>>> Stashed changes
           {description || "Описание проекта пока не добавлено."}
         </p>
 
         <div className="project-meta mt-4 flex flex-wrap gap-2">
-<<<<<<< Updated upstream
-          <span className="rounded-lg bg-[#F5F5F5] px-3 py-2 text-xs font-medium text-[#4A4A4A]">
-            Зданий: {buildingsCount}
-          </span>
-
-          <span className="rounded-lg bg-[#F5F5F5] px-3 py-2 text-xs font-medium text-[#4A4A4A]">
-            Этажей: {floorsCount}
-=======
           <span className="rounded-lg bg-page px-3 py-2 text-xs font-medium text-body">
             {workspace ? `Карт: ${workspace.nodes.length}` : `Зданий: ${buildingsCount}`}
           </span>
 
           <span className="rounded-lg bg-page px-3 py-2 text-xs font-medium text-body">
             {workspace ? `Контейнеров: ${workspace.groups.length}` : `Этажей: ${floorsCount}`}
->>>>>>> Stashed changes
           </span>
         </div>
 
         <Link
-<<<<<<< Updated upstream
-          to={`/projects/${id}`}
-          className="project-open mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#E23E1A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#C93416] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B8AA]"
-        >
-          Открыть проект <span aria-hidden="true">→</span>
-        </Link>
-=======
           to={workspace ? `/workspace/${id}` : `/projects/${id}`}
           className="project-open mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-[13px] font-normal leading-normal text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-border"
         >
@@ -125,14 +81,9 @@ function ProjectCard({
             </button>
           </div>
         )}
->>>>>>> Stashed changes
       </div>
     </article>
   );
 }
 
-<<<<<<< Updated upstream
 export default ProjectCard;
-=======
-export default ProjectCard;
->>>>>>> Stashed changes

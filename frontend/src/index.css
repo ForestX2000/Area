@@ -1,13 +1,5 @@
 
 @import "tailwindcss";
-<<<<<<< Updated upstream
-@import "./App.css";
-
-:root {
-  font-family: Inter, system-ui, Arial, sans-serif;
-  color: #4A4A4A;
-  background: #F5F5F5;
-=======
 @import "./App.css" layer(components);
 
 /* Тёмная тема включается атрибутом data-theme на <html> (см. utils/theme.ts). */
@@ -18,24 +10,11 @@
   font-family: Inter, system-ui, Arial, sans-serif;
   color: var(--ttk-graphite);
   background: var(--ttk-background);
->>>>>>> Stashed changes
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-<<<<<<< Updated upstream
-  --ttk-red: #E23E1A;
-  --ttk-red-hover: #C93416;
-  --ttk-red-light: #FCEBE7;
-
-  --ttk-graphite: #4A4A4A;
-  --ttk-white: #FFFFFF;
-
-  --ttk-background: #F5F5F5;
-  --ttk-border: #E5E5E5;
-  --ttk-muted: #777777;
-=======
   /* Primary colours come from the official SVG at company.ttk.ru/logo/. */
   --ttk-red: #DD2538;
   --ttk-red-hover: #BE1F30;
@@ -107,7 +86,6 @@
   --color-line-soft: var(--ttk-border-soft);
   --color-line-strong: var(--ttk-border-strong);
   --color-success: var(--ttk-success);
->>>>>>> Stashed changes
 }
 
 * {
@@ -126,8 +104,6 @@ button {
   font: inherit;
 }
 
-<<<<<<< Updated upstream
-=======
 input[type='checkbox'],
 input[type='range'] {
   accent-color: var(--ttk-red);
@@ -143,5 +119,4 @@ input[type='range'] {
   color: var(--ttk-graphite);
 }
 
->>>>>>> Stashed changes
 

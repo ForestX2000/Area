@@ -3,7 +3,7 @@ import Header from "../components/Header";
 
 export default function MainLayout() {
   return (
-    <div className="min-h-screen bg-[#F5F5F5] text-[#4A4A4A]">
+    <div className="min-h-screen bg-page text-body">
       <Header />
 
       <main className="mx-auto w-full max-w-[1800px] p-4 sm:p-6 lg:p-8">

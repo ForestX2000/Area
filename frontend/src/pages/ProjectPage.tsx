@@ -1,15 +1,8 @@
-<<<<<<< Updated upstream
-
-import { useState, type FormEvent } from 'react'
-=======
 import { useEffect, useRef, useState, type FormEvent } from 'react'
->>>>>>> Stashed changes
 import { Link, useParams } from 'react-router-dom'
 import { getProjects, saveProjects } from '../utils/projectStorage'
 import type { Project } from '../types/project'
 
-<<<<<<< Updated upstream
-=======
 type EditableField = 'name' | 'description'
 
 function EditButton({ field, onClick }: { field: EditableField; onClick: () => void }) {
@@ -25,28 +18,20 @@ function EditButton({ field, onClick }: { field: EditableField; onClick: () => v
   )
 }
 
->>>>>>> Stashed changes
 export default function ProjectPage() {
   const { projectId } = useParams()
 
   const [projects, setProjects] = useState<Project[]>(() => getProjects())
   const project = projects.find((item) => item.id === projectId)
 
-<<<<<<< Updated upstream
-  const [isEditing, setIsEditing] = useState(false)
-=======
   const [editingField, setEditingField] = useState<EditableField | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
->>>>>>> Stashed changes
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState('')
 
-<<<<<<< Updated upstream
-  function startEditing() {
-=======
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
@@ -60,17 +45,12 @@ export default function ProjectPage() {
   }, [editingField])
 
   function startEditing(field: EditableField) {
->>>>>>> Stashed changes
     if (!project) return
 
     setName(project.name)
     setDescription(project.description)
     setError('')
-<<<<<<< Updated upstream
-    setIsEditing(true)
-=======
     setEditingField(field)
->>>>>>> Stashed changes
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -94,11 +74,7 @@ export default function ProjectPage() {
     try {
       saveProjects(updatedProjects)
       setProjects(updatedProjects)
-<<<<<<< Updated upstream
-      setIsEditing(false)
-=======
       setEditingField(null)
->>>>>>> Stashed changes
       setError('')
     } catch {
       setError('Не удалось сохранить изменения. Попробуй ещё раз.')
@@ -108,29 +84,17 @@ export default function ProjectPage() {
   if (!project) {
     return (
       <section className="mx-auto max-w-5xl">
-<<<<<<< Updated upstream
-        <h1 className="text-2xl font-bold text-slate-900">
-          Проект не найден
-        </h1>
-
-        <p className="mt-2 text-slate-500">
-=======
         <h1 className="text-2xl font-bold text-ink">
           Проект не найден
         </h1>
 
         <p className="mt-2 text-muted">
->>>>>>> Stashed changes
           Возможно, проект был удалён или ссылка устарела.
         </p>
 
         <Link
           to="/"
-<<<<<<< Updated upstream
-          className="mt-4 inline-flex text-sm font-medium text-indigo-600 hover:text-indigo-800"
-=======
           className="mt-4 inline-flex text-sm font-medium text-brand hover:text-brand-hover"
->>>>>>> Stashed changes
         >
           ← Назад к проектам
         </Link>
@@ -142,122 +106,11 @@ export default function ProjectPage() {
     <section className="mx-auto max-w-5xl">
       <Link
         to="/"
-<<<<<<< Updated upstream
-        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-=======
         className="text-sm font-medium text-brand hover:text-brand-hover"
->>>>>>> Stashed changes
       >
         ← Назад к проектам
       </Link>
 
-<<<<<<< Updated upstream
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <p className="text-sm font-medium text-indigo-600">
-          ПРОЕКТ
-        </p>
-
-        {!isEditing ? (
-          <>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              {project.name}
-            </h1>
-
-            <p className="mt-3 text-slate-500">
-              {project.description || 'Описание пока не добавлено.'}
-            </p>
-
-            <p className="mt-4 text-sm text-slate-400">
-              ID проекта: {project.id}
-            </p>
-
-            <p className="mt-2 text-sm text-slate-400">
-              Создан: {new Date(project.createdAt).toLocaleDateString('ru-RU')}
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={startEditing}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Редактировать
-              </button>
-
-              <Link
-                to={`/projects/${project.id}/map`}
-                className="inline-flex rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-              >
-                Открыть карту
-              </Link>
-
-              <Link
-                to={`/projects/${project.id}/editor`}
-                className="inline-flex rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-              >
-                ✏️ Редактор чертежа
-              </Link>
-            </div>
-          </>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-4 grid gap-4">
-            <div className="grid gap-1">
-              <label htmlFor="edit-project-name" className="text-sm font-medium">
-                Название проекта
-              </label>
-              <input
-                id="edit-project-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={120}
-                required
-                className="rounded-lg border border-slate-300 px-3 py-2"
-              />
-            </div>
-
-            <div className="grid gap-1">
-              <label htmlFor="edit-project-description" className="text-sm font-medium">
-                Описание
-              </label>
-              <textarea
-                id="edit-project-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                maxLength={1000}
-                rows={4}
-                className="rounded-lg border border-slate-300 px-3 py-2"
-              />
-            </div>
-
-            {error && (
-              <p role="alert" className="text-sm text-red-600">
-                {error}
-              </p>
-            )}
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
-              >
-                Сохранить изменения
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditing(false)
-                  setError('')
-                }}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Отмена
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-=======
       <div className="mt-6 rounded-2xl border border-line bg-surface p-6 sm:p-8">
         <p className="text-sm font-medium text-brand">
           ПРОЕКТ
@@ -372,7 +225,6 @@ export default function ProjectPage() {
           </div>
         </form>
       </dialog>
->>>>>>> Stashed changes
     </section>
   )
 }

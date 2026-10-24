@@ -4,17 +4,6 @@ import MainLayout from "./layouts/MainLayout";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectPage from "./pages/ProjectPage";
 import ProjectMapPage from "./pages/ProjectMapPage";
-<<<<<<< Updated upstream
-import LoginPage from "./pages/LoginPage";
-import { useAuth } from "./contexts/useAuth";
-
-
-function ProtectedRoute() {
-  const { user } = useAuth();
-  const location = useLocation();
-
-  if (!user) {
-=======
 import EditorPage from "./pages/EditorPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import LoginPage from "./pages/LoginPage";
@@ -33,16 +22,11 @@ function ProtectedRoute() {
 
   if (!user) {
     // После явного выхода не возвращаем следующего вошедшего на страницу прошлой сессии.
->>>>>>> Stashed changes
     return (
       <Navigate
         to="/login"
         replace
-<<<<<<< Updated upstream
-        state={{ from: location }}
-=======
         state={signedOut ? undefined : { from: location }}
->>>>>>> Stashed changes
       />
     );
   }
@@ -50,13 +34,6 @@ function ProtectedRoute() {
   return <Outlet />;
 }
 
-<<<<<<< Updated upstream
-function NewProjectPage() {
-  return (
-    <section className="rounded-2xl border border-[#E5E5E5] bg-white p-6 text-[#4A4A4A]">
-      <h1 className="text-2xl font-bold">Создать проект</h1>
-      <p className="mt-2 text-[#777777]">
-=======
 // Редактирование, проекты и статистика доступны только администратору.
 function AdminRoute() {
   const { user } = useAuth();
@@ -73,7 +50,6 @@ function NewProjectPage() {
     <section className="rounded-2xl border border-line bg-surface p-6 text-body">
       <h1 className="text-2xl font-bold">Создать проект</h1>
       <p className="mt-2 text-muted">
->>>>>>> Stashed changes
         Здесь позже появится форма создания проекта.
       </p>
     </section>
@@ -82,22 +58,6 @@ function NewProjectPage() {
 
 export default function App() {
   return (
-<<<<<<< Updated upstream
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-
-      <Route element={<ProtectedRoute />}>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<ProjectsPage />} />
-          <Route path="/projects/new" element={<NewProjectPage />} />
-          <Route path="/projects/:projectId" element={<ProjectPage />} />
-          <Route path="/projects/:projectId/map" element={<ProjectMapPage />} />
-        </Route>
-      </Route>
-
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-=======
     <>
       <AnalyticsTracker />
       <Routes>
@@ -128,6 +88,5 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
->>>>>>> Stashed changes
   );
 }

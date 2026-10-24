@@ -1,21 +1,12 @@
 
-<<<<<<< Updated upstream
-=======
 import { sha256 } from "./sha256";
 
 export type UserRole = "admin" | "user";
 
->>>>>>> Stashed changes
 export interface DemoUser {
   id: string;
   name: string;
   email: string;
-<<<<<<< Updated upstream
-  role: string;
-}
-
-const AUTH_STORAGE_KEY = "space-map-demo-user";
-=======
   role: UserRole | string;
   avatar?: string;
 }
@@ -31,7 +22,6 @@ interface Account extends DemoUser {
 const AUTH_STORAGE_KEY = "space-map-demo-user";
 const ACCOUNTS_STORAGE_KEY = "space-map-accounts";
 const HASH_ROUNDS = 1000;
->>>>>>> Stashed changes
 
 export const DEMO_USER: DemoUser = {
   id: "demo-user-1",
@@ -42,8 +32,6 @@ export const DEMO_USER: DemoUser = {
 
 export const DEMO_PASSWORD = "SpaceMap123!";
 
-<<<<<<< Updated upstream
-=======
 export const DEMO_VIEWER: DemoUser = {
   id: "demo-viewer-1",
   name: "Мария",
@@ -144,7 +132,6 @@ export function validatePassword(password: string): string | null {
   return null;
 }
 
->>>>>>> Stashed changes
 export function getCurrentUser(): DemoUser | null {
   try {
     const saved = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -170,19 +157,6 @@ export function getCurrentUser(): DemoUser | null {
   }
 }
 
-<<<<<<< Updated upstream
-export function login(email: string, password: string): DemoUser | null {
-  if (
-    email.trim().toLowerCase() !== DEMO_USER.email ||
-    password !== DEMO_PASSWORD
-  ) {
-    return null;
-  }
-
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(DEMO_USER));
-
-  return DEMO_USER;
-=======
 export function getAccountCreatedAt(userId: string): string | null {
   return readAccounts().find((account) => account.id === userId)?.createdAt ?? null;
 }
@@ -245,7 +219,6 @@ export function changePassword(userId: string, currentPassword: string, nextPass
     const salt = randomSalt();
     return { ...account, salt, passwordHash: hashPassword(nextPassword, salt) };
   });
->>>>>>> Stashed changes
 }
 
 export function logout(): void {

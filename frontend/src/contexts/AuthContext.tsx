@@ -1,5 +1,5 @@
 
-import { useState, type ReactNode } from "react";
+import { useContext, useState, type ReactNode } from "react";
 import {
   getCurrentUser,
   login as loginDemoUser,
@@ -34,4 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+  return context;
 }

@@ -81,13 +81,13 @@ export default function EditorToolbar({
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600">{gridSize} м</span>
             <input
-              type="range"
-              min="10"
+              type="number"
+              min="0.1"
               max="100"
-              step="10"
+              step="0.1"
               value={gridSize}
-              onChange={(e) => onGridSizeChange(Number(e.target.value))}
-              className="flex-1 accent-indigo-600 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+              onChange={(e) => onGridSizeChange(Math.max(0.1, Number(e.target.value) || 0.1))}
+              className="w-20 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:bg-white"
             />
           </div>
         </div>

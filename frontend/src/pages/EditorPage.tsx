@@ -12,7 +12,7 @@ export default function EditorPage() {
   const [objects, setObjects] = useState<DrawingObject[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tool, setTool] = useState<DrawingTool>('select')
-  const [gridSize, setGridSize] = useState(50)
+  const [gridSize, setGridSize] = useState(0.1)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [zoom, setZoom] = useState(1)
 

@@ -35,6 +35,9 @@ export default function CanvasEditor({
   onZoomChange,
 }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const objectsRef = useRef(objects)
+  objectsRef.current = objects
+
   const [isDrawing, setIsDrawing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [startPoint, setStartPoint] = useState<Point>({ x: 0, y: 0 })
@@ -60,7 +63,6 @@ export default function CanvasEditor({
     []
   )
 
-  // Отслеживаем клавиши Ctrl и Shift глобально
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Control') setIsCtrlPressed(true)
@@ -80,10 +82,9 @@ export default function CanvasEditor({
     }
   }, [])
 
-  // Все точки привязки: углы прямоугольников и концы линий (в SVG-координатах)
   const snapPoints = useMemo(() => {
     const points: Point[] = []
-    for (const obj of objects) {
+    for (const obj of objectsRef.current) {
       if (obj.type === 'line') {
         points.push(obj.points[0], obj.points[1])
       }
@@ -105,7 +106,6 @@ export default function CanvasEditor({
 
   const snapRadiusSvg = 14 / zoom
 
-  // Найти ближайшую точку привязки (только если Shift зажат)
   const findSnapPoint = useCallback(
     (pt: Point): Point | null => {
       if (!isShiftPressed) return null
@@ -123,7 +123,6 @@ export default function CanvasEditor({
     [isShiftPressed, snapPoints, snapRadiusSvg]
   )
 
-  // Прилипание к сетке
   const applyGridSnap = useCallback(
     (pt: Point): Point => {
       if (!snapToGrid) return pt
@@ -135,12 +134,11 @@ export default function CanvasEditor({
     [gridSize, snapToGrid]
   )
 
-  // Найти объект под точкой (для выделения и начала перетаскивания)
   const findObjectAtPoint = useCallback(
     (pt: Point): DrawingObject | null => {
       const threshold = snapToGrid ? gridSize / 2 : 10
-      for (let i = objects.length - 1; i >= 0; i--) {
-        const obj = objects[i]
+      for (let i = objectsRef.current.length - 1; i >= 0; i--) {
+        const obj = objectsRef.current[i]
         if (obj.type === 'line') {
           const [p1, p2] = obj.points
           if (pointToLineDistance(pt, p1, p2) < threshold) return obj
@@ -164,7 +162,7 @@ export default function CanvasEditor({
       }
       return null
     },
-    [objects, snapToGrid, gridSize]
+    [snapToGrid, gridSize]
   )
 
   const handleMouseDown = useCallback(
@@ -172,16 +170,17 @@ export default function CanvasEditor({
       // Перетаскивание выделенного объекта
       if (tool === 'select' && selectedId) {
         const pt = svgPoint(event.clientX, event.clientY)
-        const obj = objects.find((o) => o.id === selectedId)
+        const obj = objectsRef.current.find((o) => o.id === selectedId)
         if (obj) {
           const x = Math.min(obj.points[0].x, obj.points[1].x)
           const y = Math.min(obj.points[0].y, obj.points[1].y)
-          // Проверяем, попал ли клик внутрь объекта
+          const w = Math.abs(obj.points[1].x - obj.points[0].x)
+          const h = Math.abs(obj.points[1].y - obj.points[0].y)
           if (
             pt.x >= x - 10 &&
-            pt.x <= x + Math.abs(obj.points[1].x - obj.points[0].x) + 10 &&
+            pt.x <= x + w + 10 &&
             pt.y >= y - 10 &&
-            pt.y <= y + Math.abs(obj.points[1].y - obj.points[0].y) + 10
+            pt.y <= y + h + 10
           ) {
             setDragOffset({ x: pt.x - x, y: pt.y - y })
             setIsDragging(true)
@@ -213,29 +212,28 @@ export default function CanvasEditor({
       setIsDrawing(true)
       setIsDragging(false)
     },
-    [tool, selectedId, objects, gridSize, snapToGrid, onSelect, svgPoint, findSnapPoint, applyGridSnap, findObjectAtPoint]
+    [tool, selectedId, onSelect, svgPoint, findSnapPoint, findObjectAtPoint, applyGridSnap]
   )
 
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
-      // Перетаскивание выделенного объекта
       if (isDragging && selectedId) {
         const pt = svgPoint(event.clientX, event.clientY)
         const snapped = findSnapPoint(pt)
         const finalPt = snapped ?? applyGridSnap(pt)
         setSnapTarget(snapped)
 
-        const obj = objects.find((o) => o.id === selectedId)
+        const obj = objectsRef.current.find((o) => o.id === selectedId)
         if (!obj) return
 
         const dx = finalPt.x - dragOffset.x
         const dy = finalPt.y - dragOffset.y
+        const w = Math.abs(obj.points[1].x - obj.points[0].x)
+        const h = Math.abs(obj.points[1].y - obj.points[0].y)
 
         onObjectsChange(
-          objects.map((o) => {
+          objectsRef.current.map((o) => {
             if (o.id !== selectedId) return o
-            const w = Math.abs(o.points[1].x - o.points[0].x)
-            const h = Math.abs(o.points[1].y - o.points[0].y)
             return {
               ...o,
               points: [
@@ -256,7 +254,7 @@ export default function CanvasEditor({
       setSnapTarget(snapped)
       setCurrentPoint(pt)
     },
-    [isDragging, selectedId, objects, gridSize, snapToGrid, svgPoint, findSnapPoint, applyGridSnap, dragOffset]
+    [isDragging, selectedId, objectsRef, onObjectsChange, svgPoint, findSnapPoint, applyGridSnap, dragOffset]
   )
 
   const handleMouseUp = useCallback(() => {
@@ -271,11 +269,11 @@ export default function CanvasEditor({
     const snapped = findSnapPoint(currentPoint)
     const end = snapped ?? applyGridSnap(currentPoint)
 
-    let newObject: DrawingObject | null = null
     const newId = `obj-${nextId}`
-
     const w = Math.abs(end.x - startPoint.x)
     const h = Math.abs(end.y - startPoint.y)
+
+    let newObject: DrawingObject | null = null
 
     if (tool === 'line') {
       newObject = {
@@ -291,10 +289,7 @@ export default function CanvasEditor({
       newObject = {
         id: newId,
         type: 'rectangle',
-        points: [
-          { x, y },
-          { x: x + w, y: y + h },
-        ],
+        points: [{ x, y }, { x: x + w, y: y + h }],
         stroke: '#1e293b',
         strokeWidth: 2,
         fill: 'rgba(37, 99, 235, 0.05)',
@@ -319,14 +314,14 @@ export default function CanvasEditor({
     }
 
     if (newObject) {
-      onObjectsChange([...objects, newObject])
+      onObjectsChange([...objectsRef.current, newObject])
       setNextId(nextId + 1)
       onSelect(newObject.id)
     }
 
     setIsDrawing(false)
     setSnapTarget(null)
-  }, [tool, startPoint, currentPoint, objects, nextId, onObjectsChange, onSelect, findSnapPoint, applyGridSnap])
+  }, [tool, startPoint, currentPoint, nextId, onObjectsChange, onSelect, findSnapPoint, applyGridSnap])
 
   const handleWheel = useCallback(
     (event: React.WheelEvent<SVGSVGElement>) => {
@@ -371,15 +366,7 @@ export default function CanvasEditor({
     } as DrawingObject
   }, [isDrawing, tool, startPoint, currentPoint, nextId])
 
-  const dimensionText = useMemo(() => {
-    if (!isDrawing || tool === 'select') return ''
-    const w = Math.abs(currentPoint.x - startPoint.x)
-    const h = Math.abs(currentPoint.y - startPoint.y)
-    return `${(w / 100).toFixed(2)} × ${(h / 100).toFixed(2)} м`
-  }, [isDrawing, tool, startPoint, currentPoint])
-
-  // Выбранный объект для отображения размеров
-  const selectedObj = objects.find((o) => o.id === selectedId)
+  const selectedObj = objectsRef.current.find((o) => o.id === selectedId)
 
   return (
     <div className="relative w-full h-full bg-slate-50 overflow-hidden">
@@ -412,7 +399,7 @@ export default function CanvasEditor({
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
 
-        {objects.map((obj) => {
+        {objectsRef.current.map((obj) => {
           const isSelected = obj.id === selectedId
           if (obj.type === 'line') {
             return (
@@ -531,7 +518,7 @@ export default function CanvasEditor({
           </>
         )}
 
-        {isDrawing && dimensionText && tool !== 'select' && (
+        {isDrawing && tool !== 'select' && (
           <text
             x={(startPoint.x + currentPoint.x) / 2}
             y={(startPoint.y + currentPoint.y) / 2 - 10}
@@ -541,11 +528,11 @@ export default function CanvasEditor({
             textAnchor="middle"
             pointerEvents="none"
           >
-            {dimensionText}
+            {Math.abs(currentPoint.x - startPoint.x).toFixed(0)} ×
+            {Math.abs(currentPoint.y - startPoint.y).toFixed(0)}
           </text>
         )}
 
-        {/* Индикатор привязки к точке (красная точка под курсором)} */}
         {snapTarget && isShiftPressed && (
           <circle
             cx={snapTarget.x}
@@ -560,13 +547,6 @@ export default function CanvasEditor({
         )}
       </svg>
 
-      {isDrawing && dimensionText && tool !== 'select' && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-md border border-slate-200 shadow-sm text-sm font-medium text-slate-700">
-          {dimensionText}{snapTarget && isShiftPressed ? ' (привязка)' : ''}
-        </div>
-      )}
-
-      {/* Информация о выделенном объекте */}
       {selectedObj && selectedId && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-md border border-slate-200 shadow-sm text-sm font-medium text-slate-700">
           {selectedObj.type === 'rectangle'

@@ -53,6 +53,11 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   const [polygon, setPolygon] = useState<{ tool: DrawingTool; points: Point[]; cursor: Point | null }>(() => ({ tool, points: [], cursor: null }))
   if (polygon.tool !== tool) setPolygon({ tool, points: [], cursor: null })
   const polygonPoints = polygon.tool === tool && tool === 'polygon' ? polygon.points : []
+  const polygonEdges = polygonPoints.slice(1).map((end, index) => ({ start: polygonPoints[index], end, current: false }))
+  const polygonEnd = polygonPoints.at(-1)
+  if (polygonEnd && polygon.cursor && Math.hypot(polygon.cursor.x - polygonEnd.x, polygon.cursor.y - polygonEnd.y) > 0.01) {
+    polygonEdges.push({ start: polygonEnd, end: polygon.cursor, current: true })
+  }
   const patternId = useId().replace(/:/g, '')
   const cellSize = Math.max(0.1, gridSize) * PIXELS_PER_METRE
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
@@ -337,6 +342,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     const height = box.height
     const label = ['rectangle', 'ellipse', 'polygon'].includes(object.type) ? `${formatMetres(width)} × ${formatMetres(height)} м`
       : `${formatMetres(Math.hypot(width, height))} м`
+    const freeformPolygon = object.type === 'polygon' && (!object.shapeKind || object.shapeKind === 'polygon')
     return (
       <g key={object.id} data-object-id={preview ? undefined : object.id} data-object-type={object.type}
         data-preview={preview || undefined} data-selected={selected || undefined} pointerEvents={preview ? 'none' : undefined}>
@@ -350,10 +356,10 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             style={showHandles ? { cursor: object.type !== 'rectangle' ? 'move' : index % 2 === 0 ? 'nwse-resize' : 'nesw-resize' } : undefined}
             fill={selected ? 'var(--ttk-red)' : 'var(--ttk-body)'} stroke="white" strokeWidth={1 / zoom} />
         ))}
-        {(selected || preview || object.type === 'dimension' || object.label) && (
+        {(selected || preview || object.type === 'dimension' || object.label) && (!freeformPolygon || object.label) && (
           <text x={(a.x + b.x) / 2} y={Math.min(a.y, b.y) - 10 / zoom} fontSize={12 / zoom}
             fill="var(--ttk-body)" textAnchor="middle" pointerEvents="none">
-            {object.type === 'marker' ? object.label : <>{object.label ? `${object.label} · ` : ''}{label}</>}
+            {object.type === 'marker' || freeformPolygon ? object.label : <>{object.label ? `${object.label} · ` : ''}{label}</>}
           </text>
         )}
       </g>
@@ -365,6 +371,15 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       <svg ref={svgRef} aria-label="Холст чертежа" role="application" tabIndex={0}
         className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
+        onContextMenu={(event) => {
+          if (tool !== 'polygon') return
+          event.preventDefault()
+          const gesture = gestureRef.current
+          clearGesture(true)
+          setPolygon({ tool, points: [], cursor: null })
+          lastClickRef.current = null
+          if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
+        }}
         onDoubleClick={(event) => {
           if (tool === 'polygon') return
           const point = svgPoint(event as unknown as PointerEvent<SVGSVGElement>)
@@ -428,6 +443,12 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
               fill="none" stroke="var(--ttk-red)" strokeWidth="2" strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />
             {polygon.cursor && polygonPoints.length >= 2 && <line x1={polygon.cursor.x} y1={polygon.cursor.y} x2={polygonPoints[0].x} y2={polygonPoints[0].y}
               stroke="var(--ttk-red)" strokeWidth="1" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+            {polygonEdges.map((edge, index) => <text key={index} data-polygon-edge-length={index} data-current-edge={edge.current || undefined}
+              x={(edge.start.x + edge.end.x) / 2} y={(edge.start.y + edge.end.y) / 2 - 10 / zoom}
+              fontSize={12 / zoom} textAnchor="middle" fill="var(--ttk-body)" stroke="white" strokeWidth={3 / zoom}
+              style={{ paintOrder: 'stroke' }} pointerEvents="none">
+              {formatMetres(Math.hypot(edge.end.x - edge.start.x, edge.end.y - edge.start.y))} м
+            </text>)}
             {polygonPoints.map((point, index) => <circle key={index} data-polygon-point={index}
               cx={point.x} cy={point.y} r={(index === 0 ? 7 : 4) / zoom} fill={index === 0 ? 'var(--ttk-red)' : 'white'}
               stroke="var(--ttk-red)" strokeWidth={1.5 / zoom}
@@ -447,7 +468,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         </g>
       </svg>
       <div className="absolute bottom-3 left-3 pointer-events-none rounded border border-line bg-white/90 px-2 py-1 text-xs text-muted">
-        {tool === 'polygon' ? `Многоугольник: ${polygonPoints.length} вершин · клик по первой точке — завершить · Escape — отменить` : `Колесико / два пальца — перемещение · Ctrl + колесо — масштаб · ячейка ${gridSize} м`}
+        {tool === 'polygon' ? `Многоугольник: ${polygonPoints.length} вершин · клик по первой точке — завершить · правая кнопка / Escape — отменить` : `Колесико / два пальца — перемещение · Ctrl + колесо — масштаб · ячейка ${gridSize} м`}
       </div>
     </div>
   )

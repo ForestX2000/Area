@@ -5,7 +5,43 @@ import {
   createProject,
   getProjects,
   saveProjects,
-} from "../utils/projectStorage";
+} from '../utils/projectStorage'
+
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={`h-4 w-4 ${className ?? ''}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={`h-4 w-4 ${className ?? ''}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  )
+}
 
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>(() => getProjects());
@@ -42,36 +78,77 @@ function ProjectsPage() {
     const updatedProjects = [...projects, newProject];
 
     try {
-      saveProjects(updatedProjects);
-      setProjects(updatedProjects);
-      setName("");
-      setDescription("");
-      setError("");
-      setIsFormOpen(false);
+      saveProjects(updatedProjects)
+      setProjects(updatedProjects)
+      setCreateName('')
+      setCreateDescription('')
+      setError('')
+      setIsCreateFormOpen(false)
     } catch {
       setError(
-        "Не удалось сохранить проект. Проверь доступное место в браузере.",
-      );
+        'Не удалось сохранить проект. Проверь доступное место в браузере.',
+      )
     }
+  }
+
+  function startEditing(project: Project) {
+    setEditingId(project.id)
+    setEditName(project.name)
+    setEditDescription(project.description)
+    setError('')
+  }
+
+  function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!editName.trim()) {
+      setError('Введи название проекта.')
+      return
+    }
+
+    const updatedProject: Project = {
+      ...projects.find((p) => p.id === editingId)!,
+      name: editName.trim(),
+      description: editDescription.trim(),
+    }
+
+    const updatedProjects = projects.map((p) =>
+      p.id === editingId ? updatedProject : p,
+    )
+
+    try {
+      saveProjects(updatedProjects)
+      setProjects(updatedProjects)
+      setEditingId(null)
+      setError('')
+    } catch {
+      setError('Не удалось сохранить изменения. Попробуй ещё раз.')
+    }
+  }
+
+  function cancelEditing() {
+    setEditingId(null)
+    setError('')
   }
 
   function handleDelete(projectId: string) {
     const confirmed = window.confirm(
-      "Ты уверена, что хочешь удалить этот проект? Это действие нельзя отменить.",
-    );
+      'Ты уверена, что хочешь удалить этот проект? Это действие нельзя отменить.',
+    )
 
-    if (!confirmed) return;
+    if (!confirmed) return
 
     const updatedProjects = projects.filter(
       (project) => project.id !== projectId,
-    );
+    )
 
     try {
-      saveProjects(updatedProjects);
-      setProjects(updatedProjects);
-      setError("");
+      saveProjects(updatedProjects)
+      setProjects(updatedProjects)
+      if (editingId === projectId) setEditingId(null)
+      setError('')
     } catch {
-      setError("Не удалось удалить проект. Попробуй ещё раз.");
+      setError('Не удалось удалить проект. Попробуй ещё раз.')
     }
   }
 

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# PDF-материалы (кейсы и т.п.) не храним в Git
+*.pdf

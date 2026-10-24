@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# Переменные окружения и секреты
+.env
+.env.*
+!.env.example
+
+# Тесты
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# .env
+.env
+.env.*
+!.env.example

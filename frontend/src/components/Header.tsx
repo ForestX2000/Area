@@ -26,7 +26,7 @@ export default function Header() {
 
   const pageTitle = isProjectsPage
     ? "Мои проекты"
-    : location.pathname === "/workspace"
+    : location.pathname.startsWith("/workspace")
       ? "2D Workspace"
     : location.pathname === "/projects/new"
       ? "Создание проекта"

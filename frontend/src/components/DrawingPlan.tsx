@@ -1,13 +1,16 @@
 import type { DrawingObject } from '../types/drawing'
 import { PIXELS_PER_METRE } from './editor/drawingGeometry'
+import DrawingShape from './editor/DrawingShape'
 
-export default function DrawingPlan({ objects, label, className = 'block h-auto w-full' }: {
+export default function DrawingPlan({ objects, label, className = 'block h-auto w-full', onMarkerActivate }: {
   objects: DrawingObject[]
   label: string
   className?: string
+  onMarkerActivate?: (object: DrawingObject) => void
 }) {
-  const bounds = objects.reduce((bounds, object) => {
-    for (const point of object.points.slice(0, 2)) {
+  const visibleObjects = objects.filter((object) => object.markerKind !== 'service')
+  const bounds = visibleObjects.reduce((bounds, object) => {
+    for (const point of object.points) {
       bounds.left = Math.min(bounds.left, point.x)
       bounds.right = Math.max(bounds.right, point.x)
       bounds.top = Math.min(bounds.top, point.y)
@@ -22,20 +25,17 @@ export default function DrawingPlan({ objects, label, className = 'block h-auto 
   return (
     <svg role="img" aria-label={label} className={className}
       viewBox={`${bounds.left - padding} ${bounds.top - padding} ${width + padding * 2} ${height + padding * 2}`}>
-      {objects.map((object) => {
+      {visibleObjects.map((object) => {
         const [a, b] = object.points
         return (
-          <g key={object.id} data-plan-object-id={object.id}>
-            {object.type === 'rectangle' ? (
-              <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)}
-                width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)}
-                fill={object.fill ?? 'var(--ttk-drawing-fill)'} stroke={object.stroke ?? 'var(--ttk-graphite)'}
-                strokeWidth={object.strokeWidth ?? 2} strokeDasharray={object.strokeDasharray} vectorEffect="non-scaling-stroke" />
-            ) : (
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke={object.stroke ?? 'var(--ttk-graphite)'} strokeWidth={object.strokeWidth ?? 2}
-                strokeDasharray={object.strokeDasharray} vectorEffect="non-scaling-stroke" />
-            )}
+          <g key={object.id} data-plan-object-id={object.id}
+            role={object.type === 'marker' && onMarkerActivate ? 'button' : undefined}
+            aria-label={object.type === 'marker' ? `Метка: ${object.label || object.markerKind}` : undefined}
+            tabIndex={object.type === 'marker' && onMarkerActivate ? 0 : undefined}
+            onClick={object.type === 'marker' && onMarkerActivate ? (event) => { event.stopPropagation(); onMarkerActivate(object) } : undefined}
+            onKeyDown={object.type === 'marker' && onMarkerActivate ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onMarkerActivate(object) } } : undefined}
+            style={object.type === 'marker' && onMarkerActivate ? { cursor: 'pointer' } : undefined}>
+            <DrawingShape object={object} />
             {(object.label || object.type === 'dimension') && (
               <text x={(a.x + b.x) / 2} y={Math.min(a.y, b.y) - 10} textAnchor="middle" fontSize="12" fill="var(--ttk-body)">
                 {object.label}{object.label && object.type === 'dimension' ? ' · ' : ''}

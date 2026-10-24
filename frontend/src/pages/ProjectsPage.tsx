@@ -252,6 +252,7 @@ function ProjectsPage() {
                   description={project.description}
                   buildingsCount={0}
                   floorsCount={0}
+                  drawings={project.drawings}
                   onDelete={() => handleDelete(project.id)}
                 />
               ))}

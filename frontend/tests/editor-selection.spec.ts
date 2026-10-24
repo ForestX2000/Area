@@ -126,6 +126,51 @@ test('the selection can be deleted, restored and deleted again as one action', a
   expect(await stored(page)).toHaveLength(4)
 })
 
+for (const group of [false, true]) {
+  test(`Delete removes ${group ? 'a selected group' : 'a selected object'} as one undoable action`, async ({ page }) => {
+    const before = await stored(page)
+    // Without selection, Delete must not create a history entry.
+    await canvas(page).focus()
+    await page.keyboard.press('Delete')
+    expect(await stored(page)).toEqual(before)
+    await expect(page.getByRole('button', { name: 'Отменить · Ctrl + Z' })).toBeDisabled()
+
+    if (group) await selectRooms(page)
+    else {
+      const room = await pointOnScreen(page, { x: 150, y: 150 })
+      await page.mouse.click(room.x, room.y)
+    }
+    await page.keyboard.press('Delete')
+    const after = before.filter((object) => !(group ? ['room-a', 'room-b'] : ['room-a']).includes(object.id))
+    expect(await stored(page)).toEqual(after)
+    await expect(canvas(page).locator('[data-object-id]')).toHaveCount(after.length)
+    await expect(selected(page)).toHaveCount(0)
+    await page.keyboard.press('Control+z')
+    expect(await stored(page)).toEqual(before)
+    await expect(page.getByRole('button', { name: 'Отменить · Ctrl + Z' })).toBeDisabled()
+    await page.keyboard.press('Control+y')
+    expect(await stored(page)).toEqual(after)
+  })
+}
+
+test('Delete edits text and leaves the selected object intact while a field has focus', async ({ page }) => {
+  const room = await pointOnScreen(page, { x: 150, y: 150 })
+  await page.mouse.click(room.x, room.y)
+  const label = page.getByLabel('Название', { exact: true })
+  await label.fill('Комната')
+  await label.press('Home')
+  await label.press('Delete')
+  await expect(label).toHaveValue('омната')
+  await expect(selected(page)).toHaveCount(1)
+  expect(await stored(page)).toHaveLength(6)
+
+  const width = page.getByLabel('Ширина', { exact: true })
+  await width.focus()
+  await width.press('Delete')
+  await expect(selected(page)).toHaveCount(1)
+  expect(await stored(page)).toHaveLength(6)
+})
+
 test('Escape restores the previous selection and pointer cancellation removes the frame', async ({ page }) => {
   const room = await pointOnScreen(page, { x: 150, y: 150 })
   await page.mouse.click(room.x, room.y)

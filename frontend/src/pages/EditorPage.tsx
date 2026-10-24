@@ -61,11 +61,24 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     setSelectedIds([])
   }, [])
 
+  const handleDelete = useCallback(() => {
+    if (selectedIds.length === 0) return
+    setSelectedIds([])
+    handleObjectsChange(objects.filter((object) => !selectedIds.includes(object.id)))
+  }, [selectedIds, objects, handleObjectsChange])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return
       const target = event.target
       if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
+      if (event.key === 'Delete' && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+        if (selectedIds.length > 0) {
+          event.preventDefault()
+          handleDelete()
+        }
+        return
+      }
       if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return
       if (event.code === 'KeyZ' || event.key.toLowerCase() === 'z') {
         event.preventDefault()
@@ -77,7 +90,7 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleUndo, handleRedo])
+  }, [handleUndo, handleRedo, handleDelete, selectedIds.length])
 
   const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
     setSelectedIds(ids)
@@ -107,12 +120,6 @@ function ProjectEditor({ projectId }: { projectId?: string }) {
     },
     [selectedId, objects, handleObjectsChange]
   )
-
-  const handleDelete = useCallback(() => {
-    if (selectedIds.length === 0) return
-    setSelectedIds([])
-    handleObjectsChange(objects.filter((object) => !selectedIds.includes(object.id)))
-  }, [selectedIds, objects, handleObjectsChange])
 
   if (!projectId) {
     return (

@@ -83,30 +83,30 @@ function ProjectsPage() {
         : "проектов";
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] text-[#4A4A4A]">
+    <div className="min-h-screen bg-page text-body">
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <section className="mb-9">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-[#E23E1A]">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">
             Твоё пространство
           </p>
 
           <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-[#4A4A4A] sm:text-4xl">
+              <h2 className="text-3xl font-bold tracking-tight text-body sm:text-4xl">
                 Мои проекты
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#777777] sm:text-base">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
                 Организуй здания, планы помещений и панорамы в одном месте.
                 Выбирай проект и продолжай работу с интерактивной картой.
               </p>
             </div>
 
-            <div className="flex items-center gap-4 rounded-xl border border-[#E5E5E5] bg-white px-5 py-4">
+            <div className="flex items-center gap-4 rounded-xl border border-line bg-white px-5 py-4">
               <div>
-                <p className="text-2xl font-bold leading-6 text-[#4A4A4A]">
+                <p className="text-2xl font-bold leading-6 text-body">
                   {projects.length}
                 </p>
-                <p className="mt-1 text-xs text-[#777777]">{projectWord}</p>
+                <p className="mt-1 text-xs text-muted">{projectWord}</p>
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@ function ProjectsPage() {
         {error && (
           <div
             role="alert"
-            className="mb-6 flex items-start gap-3 rounded-lg border border-[#F2B8AA] bg-[#FCEBE7] p-4 text-sm text-[#A52C13]"
+            className="mb-6 flex items-start gap-3 rounded-lg border border-brand-border bg-brand-soft p-4 text-sm text-brand-strong"
           >
             <span className="font-bold">!</span>
             <p>{error}</p>
@@ -124,15 +124,15 @@ function ProjectsPage() {
         )}
 
         {isFormOpen && (
-          <section className="mb-9 overflow-hidden rounded-xl border border-[#E5E5E5] bg-white">
-            <div className="border-b border-[#E5E5E5] px-5 py-5 sm:px-7">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-[#E23E1A]">
+          <section className="mb-9 overflow-hidden rounded-xl border border-line bg-white">
+            <div className="border-b border-line px-5 py-5 sm:px-7">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand">
                 Новый объект
               </p>
-              <h3 className="text-lg font-bold text-[#4A4A4A]">
+              <h3 className="text-lg font-bold text-body">
                 Создание проекта
               </h3>
-              <p className="mt-1 text-sm text-[#777777]">
+              <p className="mt-1 text-sm text-muted">
                 Укажи название и при необходимости добавь описание пространства.
               </p>
             </div>
@@ -140,7 +140,7 @@ function ProjectsPage() {
             <form className="grid gap-5 p-5 sm:p-7" onSubmit={handleSubmit}>
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-[#4A4A4A]">
+                  <span className="mb-2 block text-sm font-semibold text-body">
                     Название проекта
                   </span>
                   <input
@@ -151,14 +151,14 @@ function ProjectsPage() {
                     maxLength={120}
                     required
                     autoFocus
-                    className="w-full rounded-lg border border-[#D9D9D9] bg-white px-4 py-3 text-sm text-[#4A4A4A] outline-none transition placeholder:text-[#999999] focus:border-[#E23E1A] focus:ring-4 focus:ring-[#FCEBE7]"
+                    className="w-full rounded-lg border border-line-strong bg-white px-4 py-3 text-sm text-body outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-brand-soft"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-[#4A4A4A]">
+                  <span className="mb-2 block text-sm font-semibold text-body">
                     Описание
-                    <span className="ml-2 font-normal text-[#999999]">
+                    <span className="ml-2 font-normal text-muted">
                       Необязательно
                     </span>
                   </span>
@@ -168,12 +168,12 @@ function ProjectsPage() {
                     onChange={(event) => setDescription(event.target.value)}
                     placeholder="Кратко опиши пространство"
                     maxLength={1000}
-                    className="w-full rounded-lg border border-[#D9D9D9] bg-white px-4 py-3 text-sm text-[#4A4A4A] outline-none transition placeholder:text-[#999999] focus:border-[#E23E1A] focus:ring-4 focus:ring-[#FCEBE7]"
+                    className="w-full rounded-lg border border-line-strong bg-white px-4 py-3 text-sm text-body outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-brand-soft"
                   />
                 </label>
               </div>
 
-              <div className="flex flex-col-reverse gap-3 border-t border-[#E5E5E5] pt-5 sm:flex-row sm:justify-end">
+              <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -182,13 +182,13 @@ function ProjectsPage() {
                     setDescription("");
                     setError("");
                   }}
-                  className="rounded-lg border border-[#D9D9D9] px-5 py-3 text-sm font-semibold text-[#4A4A4A] transition hover:bg-[#F5F5F5]"
+                  className="rounded-lg border border-line-strong px-5 py-3 text-sm font-semibold text-body transition hover:bg-page"
                 >
                   Отмена
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#E23E1A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#C93416] focus:outline-none focus:ring-4 focus:ring-[#FCEBE7]"
+                  className="rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
                 >
                   Создать проект
                 </button>
@@ -198,8 +198,8 @@ function ProjectsPage() {
         )}
 
         {projects.length === 0 ? (
-          <section className="rounded-xl border border-dashed border-[#D0D0D0] bg-white px-6 py-16 text-center sm:py-20">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-[#FCEBE7] text-[#E23E1A]">
+          <section className="rounded-xl border border-dashed border-line-strong bg-white px-6 py-16 text-center sm:py-20">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-brand-soft text-brand">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -213,10 +213,10 @@ function ProjectsPage() {
               </svg>
             </div>
 
-            <h3 className="text-xl font-bold text-[#4A4A4A]">
+            <h3 className="text-xl font-bold text-body">
               Начни с первого проекта
             </h3>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#777777]">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
               Создай пространство, загрузи план помещения и отметь места, к
               которым хочешь прикрепить панорамы.
             </p>
@@ -228,7 +228,7 @@ function ProjectsPage() {
                   setIsFormOpen(true);
                   setError("");
                 }}
-                className="mt-6 rounded-lg bg-[#E23E1A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#C93416] focus:outline-none focus:ring-4 focus:ring-[#FCEBE7]"
+                className="mt-6 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
               >
                 + Создать первый проект
               </button>
@@ -237,45 +237,23 @@ function ProjectsPage() {
         ) : (
           <section>
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-bold text-[#4A4A4A]">Все проекты</h3>
-              <span className="text-xs text-[#777777]">
+              <h3 className="text-sm font-bold text-body">Все проекты</h3>
+              <span className="text-xs text-muted">
                 {projects.length} в списке
               </span>
             </div>
 
             <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 2xl:grid-cols-3">
               {projects.map((project) => (
-                <article
+                <ProjectCard
                   key={project.id}
-                  className="group min-w-0 overflow-hidden rounded-xl border border-[#E5E5E5] bg-white transition duration-200 hover:-translate-y-1 hover:border-[#F2B8AA] hover:shadow-lg hover:shadow-[#4A4A4A]/5"
-                >
-                  <div className="relative flex h-28 items-center justify-center overflow-hidden bg-[#4A4A4A]">
-                    <div className="absolute -right-6 -top-10 h-32 w-32 rounded-full border-[20px] border-white/5" />
-                    <div className="absolute -bottom-12 -left-4 h-28 w-28 rounded-full border-[16px] border-[#E23E1A]/40" />
-
-                    <div className="absolute left-0 top-0 h-full w-1 bg-[#E23E1A]" />
-                  </div>
-
-                  <div className="min-w-0 p-5">
-                    <ProjectCard
-                      id={project.id}
-                      name={project.name}
-                      description={project.description}
-                      buildingsCount={0}
-                      floorsCount={0}
-                    />
-
-                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#E5E5E5] pt-4">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(project.id)}
-                        className="rounded-lg px-3 py-2 text-xs font-semibold text-[#777777] transition hover:bg-[#FCEBE7] hover:text-[#E23E1A]"
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  buildingsCount={0}
+                  floorsCount={0}
+                  onDelete={() => handleDelete(project.id)}
+                />
               ))}
             </div>
           </section>

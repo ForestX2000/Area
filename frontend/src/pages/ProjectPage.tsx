@@ -55,17 +55,17 @@ export default function ProjectPage() {
   if (!project) {
     return (
       <section className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-ink">
           Проект не найден
         </h1>
 
-        <p className="mt-2 text-slate-500">
+        <p className="mt-2 text-muted">
           Возможно, проект был удалён или ссылка устарела.
         </p>
 
         <Link
           to="/"
-          className="mt-4 inline-flex text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          className="mt-4 inline-flex text-sm font-medium text-brand hover:text-brand-hover"
         >
           ← Назад к проектам
         </Link>
@@ -77,31 +77,31 @@ export default function ProjectPage() {
     <section className="mx-auto max-w-5xl">
       <Link
         to="/"
-        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+        className="text-sm font-medium text-brand hover:text-brand-hover"
       >
         ← Назад к проектам
       </Link>
 
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <p className="text-sm font-medium text-indigo-600">
+      <div className="mt-6 rounded-2xl border border-line bg-white p-6 sm:p-8">
+        <p className="text-sm font-medium text-brand">
           ПРОЕКТ
         </p>
 
         {!isEditing ? (
           <>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
               {project.name}
             </h1>
 
-            <p className="mt-3 text-slate-500">
+            <p className="mt-3 text-muted">
               {project.description || 'Описание пока не добавлено.'}
             </p>
 
-            <p className="mt-4 text-sm text-slate-400">
+            <p className="mt-4 text-sm text-muted">
               ID проекта: {project.id}
             </p>
 
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-muted">
               Создан: {new Date(project.createdAt).toLocaleDateString('ru-RU')}
             </p>
 
@@ -109,21 +109,21 @@ export default function ProjectPage() {
               <button
                 type="button"
                 onClick={startEditing}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-line-strong px-4 py-2.5 text-sm font-semibold text-body hover:bg-surface-muted"
               >
                 Редактировать
               </button>
 
               <Link
                 to={`/projects/${project.id}/map`}
-                className="inline-flex rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                className="inline-flex rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
               >
                 Открыть карту
               </Link>
 
               <Link
                 to={`/projects/${project.id}/editor`}
-                className="inline-flex rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                className="inline-flex rounded-lg border border-line-strong px-4 py-2.5 text-sm font-semibold text-body hover:bg-surface-muted transition"
               >
                 ✏️ Редактор чертежа
               </Link>
@@ -141,7 +141,7 @@ export default function ProjectPage() {
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
                 required
-                className="rounded-lg border border-slate-300 px-3 py-2"
+                className="rounded-lg border border-line-strong px-3 py-2"
               />
             </div>
 
@@ -155,12 +155,12 @@ export default function ProjectPage() {
                 onChange={(event) => setDescription(event.target.value)}
                 maxLength={1000}
                 rows={4}
-                className="rounded-lg border border-slate-300 px-3 py-2"
+                className="rounded-lg border border-line-strong px-3 py-2"
               />
             </div>
 
             {error && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-brand-hover">
                 {error}
               </p>
             )}
@@ -168,7 +168,7 @@ export default function ProjectPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="submit"
-                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover"
               >
                 Сохранить изменения
               </button>
@@ -179,7 +179,7 @@ export default function ProjectPage() {
                   setIsEditing(false)
                   setError('')
                 }}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-line-strong px-4 py-2.5 text-sm font-semibold text-body hover:bg-surface-muted"
               >
                 Отмена
               </button>

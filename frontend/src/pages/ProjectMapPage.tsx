@@ -414,8 +414,8 @@ export default function ProjectMapPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#E5E5E5] border-t-[#E23E1A]" />
-          <p className="text-sm font-medium text-[#777777]">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-line border-t-brand" />
+          <p className="text-sm font-medium text-muted">
             Загружаем пространство...
           </p>
         </div>
@@ -424,11 +424,11 @@ export default function ProjectMapPage() {
   }
 
   return (
-    <div className="text-[#4A4A4A]">
+    <div className="text-body">
       <header className="mb-7">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-[#777777] transition hover:text-[#E23E1A]"
+          className="inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-brand"
         >
           <span aria-hidden="true">←</span>
           Все проекты
@@ -437,10 +437,10 @@ export default function ProjectMapPage() {
         <div className="mt-5 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E23E1A] text-lg text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-lg text-white">
                 ▧
               </span>
-              <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#E23E1A]">
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand">
                 Space Map / Editor
               </span>
             </div>
@@ -449,13 +449,13 @@ export default function ProjectMapPage() {
               Карта пространства
             </h1>
 
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[#777777]">
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
               Добавляй объекты на план, описывай места и связывай их с
               панорамами.
             </p>
           </div>
 
-          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 self-start rounded-xl bg-[#E23E1A] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#C93416] focus-within:ring-4 focus-within:ring-[#FCEBE7] sm:self-auto">
+          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 self-start rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus-within:ring-4 focus-within:ring-brand-soft sm:self-auto">
             <span className="text-lg leading-none">+</span>
             {imageUrl ? "Заменить план" : "Загрузить план"}
             <input
@@ -472,7 +472,7 @@ export default function ProjectMapPage() {
       {error && (
         <div
           role="alert"
-          className="mb-5 flex items-start gap-3 rounded-xl border border-[#F2B8AA] bg-[#FCEBE7] p-4 text-sm text-[#C93416]"
+          className="mb-5 flex items-start gap-3 rounded-xl border border-brand-border bg-brand-soft p-4 text-sm text-brand-hover"
         >
           <span className="font-bold">!</span>
           <p>{error}</p>
@@ -488,23 +488,23 @@ export default function ProjectMapPage() {
       )}
 
       {saving && (
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#F2B8AA] bg-white px-4 py-3 text-sm text-[#E23E1A]">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-[#E23E1A]" />
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-brand-border bg-white px-4 py-3 text-sm text-brand">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-brand" />
           Сохраняем изменения...
         </div>
       )}
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Рабочая область карты */}
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEEEEE] px-5 py-4 sm:px-6">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FCEBE7] text-xl text-[#E23E1A]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-xl text-brand">
                 ▧
               </div>
               <div className="min-w-0">
                 <h2 className="font-semibold">План помещения</h2>
-                <p className="mt-1 break-all text-xs text-[#777777]">
+                <p className="mt-1 break-all text-xs text-muted">
                   {imageName || "Изображение ещё не загружено"}
                 </p>
               </div>
@@ -515,7 +515,7 @@ export default function ProjectMapPage() {
                 type="button"
                 onClick={handleImageDelete}
                 disabled={saving}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-[#777777] transition hover:bg-[#FCEBE7] hover:text-[#E23E1A] disabled:opacity-50"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-brand-soft hover:text-brand disabled:opacity-50"
               >
                 Удалить план
               </button>
@@ -523,12 +523,12 @@ export default function ProjectMapPage() {
           </div>
 
           {imageUrl && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEEEEE] bg-[#F5F5F5] px-5 py-3 sm:px-6">
-              <p className="text-sm text-[#777777]">
-                <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#E23E1A]" />
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft bg-page px-5 py-3 sm:px-6">
+              <p className="text-sm text-muted">
+                <span className="mr-2 inline-block h-2 w-2 rounded-full bg-brand" />
                 Нажми на свободное место плана, чтобы добавить точку
               </p>
-              <span className="rounded-lg border border-[#E5E5E5] bg-white px-3 py-1.5 text-xs font-medium">
+              <span className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium">
                 Объектов: {points.length}
               </span>
             </div>
@@ -536,7 +536,7 @@ export default function ProjectMapPage() {
 
           <div className="p-4 sm:p-6">
             {imageUrl ? (
-              <div className="overflow-hidden rounded-xl border border-[#E5E5E5] bg-[#F5F5F5] p-2 sm:p-4">
+              <div className="overflow-hidden rounded-xl border border-line bg-page p-2 sm:p-4">
                 <div
                   className="relative mx-auto w-full cursor-crosshair overflow-hidden rounded-lg bg-white shadow-sm"
                   onClick={handleMapClick}
@@ -564,8 +564,8 @@ export default function ProjectMapPage() {
                         }}
                         className={`absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] border-white text-xs font-bold text-white transition sm:h-9 sm:w-9 ${
                           selected
-                            ? "z-10 scale-110 bg-[#E23E1A] shadow-lg ring-4 ring-[#F2B8AA]/70"
-                            : "bg-[#4A4A4A] shadow-md hover:scale-110 hover:bg-[#E23E1A]"
+                            ? "z-10 scale-110 bg-brand shadow-lg ring-4 ring-brand-border/70"
+                            : "bg-body shadow-md hover:scale-110 hover:bg-brand"
                         }`}
                         style={{
                           left: `${point.x}%`,
@@ -579,18 +579,18 @@ export default function ProjectMapPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-[340px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D0D0D0] bg-[#F5F5F5] px-6 py-12 text-center">
-                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FCEBE7] text-3xl text-[#E23E1A]">
+              <div className="flex min-h-[340px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-line-strong bg-page px-6 py-12 text-center">
+                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-soft text-3xl text-brand">
                   ▧
                 </div>
                 <h3 className="text-lg font-semibold">
                   Начни с плана помещения
                 </h3>
-                <p className="mt-2 max-w-sm text-sm leading-6 text-[#777777]">
+                <p className="mt-2 max-w-sm text-sm leading-6 text-muted">
                   Загрузи изображение этажа или помещения. Затем отмечай входы,
                   залы, сервисные зоны и другие объекты.
                 </p>
-                <label className="mt-6 inline-flex cursor-pointer items-center justify-center rounded-xl bg-[#E23E1A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#C93416]">
+                <label className="mt-6 inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover">
                   Выбрать изображение
                   <input
                     type="file"
@@ -600,7 +600,7 @@ export default function ProjectMapPage() {
                     disabled={saving}
                   />
                 </label>
-                <p className="mt-3 text-xs text-[#999999]">
+                <p className="mt-3 text-xs text-muted">
                   Поддерживаются файлы изображений
                 </p>
               </div>
@@ -608,7 +608,7 @@ export default function ProjectMapPage() {
           </div>
 
           {imageUrl && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EEEEEE] px-5 py-4 text-xs text-[#999999] sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-5 py-4 text-xs text-muted sm:px-6">
               <span>Выбери маркер, чтобы редактировать объект</span>
               <span>Изменения сохраняются автоматически</span>
             </div>
@@ -617,23 +617,23 @@ export default function ProjectMapPage() {
 
         {/* Список объектов и редактор */}
         <aside className="min-w-0 space-y-5">
-          <section className="overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white shadow-sm">
-            <div className="border-b border-[#EEEEEE] px-5 py-5">
+          <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+            <div className="border-b border-line-soft px-5 py-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="font-semibold">Объекты на карте</h2>
-                  <p className="mt-1 text-xs text-[#777777]">
+                  <p className="mt-1 text-xs text-muted">
                     Список точек пространства
                   </p>
                 </div>
-                <span className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-[#FCEBE7] px-2 text-sm font-bold text-[#E23E1A]">
+                <span className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-brand-soft px-2 text-sm font-bold text-brand">
                   {points.length}
                 </span>
               </div>
 
               {points.length > 0 && (
-                <label className="mt-4 flex items-center gap-2 rounded-xl border border-[#E5E5E5] bg-[#F5F5F5] px-3">
-                  <span className="text-[#999999]" aria-hidden="true">
+                <label className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-page px-3">
+                  <span className="text-muted" aria-hidden="true">
                     ⌕
                   </span>
                   <input
@@ -641,13 +641,13 @@ export default function ProjectMapPage() {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Найти точку..."
-                    className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-[#999999]"
+                    className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-muted"
                   />
                   {search && (
                     <button
                       type="button"
                       onClick={() => setSearch("")}
-                      className="px-1 text-[#777777] hover:text-[#E23E1A]"
+                      className="px-1 text-muted hover:text-brand"
                       aria-label="Очистить поиск"
                     >
                       ×
@@ -659,18 +659,18 @@ export default function ProjectMapPage() {
 
             {points.length === 0 ? (
               <div className="px-5 py-9 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5F5F5] text-xl text-[#777777]">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-page text-xl text-muted">
                   ⊙
                 </div>
                 <p className="text-sm font-medium">Пока нет объектов</p>
-                <p className="mx-auto mt-2 max-w-[230px] text-xs leading-5 text-[#777777]">
+                <p className="mx-auto mt-2 max-w-[230px] text-xs leading-5 text-muted">
                   {imageUrl
                     ? "Нажми на план, чтобы добавить первую точку."
                     : "Сначала загрузи план помещения."}
                 </p>
               </div>
             ) : filteredPoints.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-[#777777]">
+              <p className="px-5 py-8 text-center text-sm text-muted">
                 Ничего не найдено. Попробуй другой запрос.
               </p>
             ) : (
@@ -687,15 +687,15 @@ export default function ProjectMapPage() {
                         aria-pressed={selected}
                         className={`group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
                           selected
-                            ? "border-[#F2B8AA] bg-[#FCEBE7]"
-                            : "border-transparent hover:border-[#E5E5E5] hover:bg-[#F5F5F5]"
+                            ? "border-brand-border bg-brand-soft"
+                            : "border-transparent hover:border-line hover:bg-page"
                         }`}
                       >
                         <span
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
                             selected
-                              ? "bg-[#E23E1A] text-white"
-                              : "bg-[#F5F5F5] text-[#4A4A4A]"
+                              ? "bg-brand text-white"
+                              : "bg-page text-body"
                           }`}
                         >
                           {index + 1}
@@ -705,14 +705,14 @@ export default function ProjectMapPage() {
                           <span className="block break-words text-sm font-medium">
                             {point.title || `Точка ${index + 1}`}
                           </span>
-                          <span className="mt-1 block truncate text-xs text-[#777777]">
+                          <span className="mt-1 block truncate text-xs text-muted">
                             {getCategoryIcon(point.category)}{" "}
                             {getCategoryLabel(point.category)}
                             {point.panoramaKey ? " · Панорама" : ""}
                           </span>
                         </span>
 
-                        <span className="text-[#D0D0D0] group-hover:text-[#777777]">
+                        <span className="text-line-strong group-hover:text-muted">
                           →
                         </span>
                       </button>
@@ -724,15 +724,15 @@ export default function ProjectMapPage() {
           </section>
 
           {selectedPoint ? (
-            <section className="overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white shadow-sm">
-              <div className="border-b border-[#EEEEEE] px-5 py-5">
-                <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#E23E1A]">
+            <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+              <div className="border-b border-line-soft px-5 py-5">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-brand">
                   Настройки объекта
                 </p>
                 <h2 className="mt-1 text-lg font-semibold">
                   Редактирование точки
                 </h2>
-                <p className="mt-1 text-xs text-[#777777]">
+                <p className="mt-1 text-xs text-muted">
                   Название, тип, описание и панорама
                 </p>
               </div>
@@ -745,7 +745,7 @@ export default function ProjectMapPage() {
                     value={selectedPoint.title}
                     onChange={handleTitleChange}
                     maxLength={120}
-                    className="w-full rounded-xl border border-[#E5E5E5] bg-[#F5F5F5] px-3.5 py-3 text-sm outline-none transition placeholder:text-[#999999] focus:border-[#E23E1A] focus:bg-white focus:ring-4 focus:ring-[#FCEBE7]"
+                    className="w-full rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition placeholder:text-muted focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand-soft"
                     placeholder="Например, Главный вход"
                   />
                 </label>
@@ -755,7 +755,7 @@ export default function ProjectMapPage() {
                   <select
                     value={selectedPoint.category ?? "other"}
                     onChange={handleCategoryChange}
-                    className="w-full rounded-xl border border-[#E5E5E5] bg-[#F5F5F5] px-3.5 py-3 text-sm outline-none transition focus:border-[#E23E1A] focus:bg-white focus:ring-4 focus:ring-[#FCEBE7]"
+                    className="w-full rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand-soft"
                   >
                     {POINT_CATEGORIES.map((category) => (
                       <option key={category.value} value={category.value}>
@@ -773,39 +773,39 @@ export default function ProjectMapPage() {
                     rows={3}
                     maxLength={1000}
                     placeholder="Расскажи, что находится в этом месте..."
-                    className="w-full resize-y rounded-xl border border-[#E5E5E5] bg-[#F5F5F5] px-3.5 py-3 text-sm outline-none transition placeholder:text-[#999999] focus:border-[#E23E1A] focus:bg-white focus:ring-4 focus:ring-[#FCEBE7]"
+                    className="w-full resize-y rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition placeholder:text-muted focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand-soft"
                   />
-                  <span className="block text-right text-xs text-[#999999]">
+                  <span className="block text-right text-xs text-muted">
                     {(selectedPoint.description ?? "").length}/1000
                   </span>
                 </label>
 
-                <div className="border-t border-[#EEEEEE] pt-5">
+                <div className="border-t border-line-soft pt-5">
                   <div className="mb-4 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FCEBE7] text-lg text-[#E23E1A]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-soft text-lg text-brand">
                       ◉
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold">Панорама</h3>
-                      <p className="mt-1 text-xs text-[#777777]">
+                      <p className="mt-1 text-xs text-muted">
                         Изображение, связанное с этой точкой
                       </p>
                     </div>
                   </div>
 
                   {panoramaLoading ? (
-                    <div className="rounded-xl bg-[#F5F5F5] p-4 text-sm text-[#777777]">
+                    <div className="rounded-xl bg-page p-4 text-sm text-muted">
                       Загружаем панораму...
                     </div>
                   ) : panoramaUrl ? (
                     <div className="space-y-3">
-                      <div className="overflow-hidden rounded-xl border border-[#E5E5E5] bg-[#F5F5F5]">
+                      <div className="overflow-hidden rounded-xl border border-line bg-page">
                         <img
                           src={panoramaUrl}
                           alt={`Панорама: ${selectedPoint.title}`}
                           className="h-36 w-full object-cover"
                         />
-                        <p className="break-all px-3 py-2.5 text-xs text-[#777777]">
+                        <p className="break-all px-3 py-2.5 text-xs text-muted">
                           {panoramaName || "Панорама загружена"}
                         </p>
                       </div>
@@ -813,7 +813,7 @@ export default function ProjectMapPage() {
                       <button
                         type="button"
                         onClick={() => setViewerOpen(true)}
-                        className="w-full rounded-xl bg-[#E23E1A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#C93416] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B8AA]"
+                        className="w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-border"
                       >
                         Открыть просмотр →
                       </button>
@@ -822,23 +822,23 @@ export default function ProjectMapPage() {
                         type="button"
                         onClick={handlePanoramaDelete}
                         disabled={saving}
-                        className="w-full rounded-xl border border-[#E5E5E5] px-4 py-2.5 text-sm font-medium transition hover:border-[#F2B8AA] hover:bg-[#FCEBE7] hover:text-[#E23E1A] disabled:opacity-50"
+                        className="w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium transition hover:border-brand-border hover:bg-brand-soft hover:text-brand disabled:opacity-50"
                       >
                         Удалить панораму
                       </button>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-dashed border-[#D0D0D0] bg-[#F5F5F5] px-4 py-5 text-center">
+                    <div className="rounded-xl border border-dashed border-line-strong bg-page px-4 py-5 text-center">
                       <p className="text-sm font-medium">
                         Панорама не добавлена
                       </p>
-                      <p className="mt-1 text-xs leading-5 text-[#777777]">
+                      <p className="mt-1 text-xs leading-5 text-muted">
                         Загрузи изображение, чтобы связать его с этой точкой.
                       </p>
                     </div>
                   )}
 
-                  <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-[#F2B8AA] px-4 py-3 text-sm font-semibold text-[#E23E1A] transition hover:bg-[#FCEBE7]">
+                  <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-brand-border px-4 py-3 text-sm font-semibold text-brand transition hover:bg-brand-soft">
                     {panoramaUrl
                       ? "Заменить изображение"
                       : "+ Загрузить панораму"}
@@ -852,12 +852,12 @@ export default function ProjectMapPage() {
                   </label>
                 </div>
 
-                <div className="border-t border-[#EEEEEE] pt-4">
+                <div className="border-t border-line-soft pt-4">
                   <button
                     type="button"
                     onClick={handleDeletePoint}
                     disabled={saving}
-                    className="w-full rounded-xl border border-[#F2B8AA] px-4 py-3 text-sm font-medium text-[#E23E1A] transition hover:bg-[#FCEBE7] disabled:opacity-50"
+                    className="w-full rounded-xl border border-brand-border px-4 py-3 text-sm font-medium text-brand transition hover:bg-brand-soft disabled:opacity-50"
                   >
                     Удалить точку
                   </button>
@@ -865,12 +865,12 @@ export default function ProjectMapPage() {
               </div>
             </section>
           ) : (
-            <section className="rounded-2xl border border-dashed border-[#D0D0D0] bg-white p-6 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5F5F5] text-xl text-[#777777]">
+            <section className="rounded-2xl border border-dashed border-line-strong bg-white p-6 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-page text-xl text-muted">
                 ⚙
               </div>
               <h2 className="text-sm font-semibold">Настройки объекта</h2>
-              <p className="mt-2 text-xs leading-5 text-[#777777]">
+              <p className="mt-2 text-xs leading-5 text-muted">
                 Выбери точку в списке или нажми на маркер плана, чтобы изменить
                 её данные.
               </p>

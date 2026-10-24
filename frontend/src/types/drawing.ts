@@ -1,5 +1,5 @@
 
-export type DrawingTool = 'select' | 'line' | 'rectangle' | 'square' | 'dimension'
+export type DrawingTool = 'select' | 'line' | 'rectangle' | 'dimension'
 
 export interface Point {
   x: number

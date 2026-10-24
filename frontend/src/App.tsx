@@ -28,9 +28,9 @@ function ProtectedRoute() {
 
 function NewProjectPage() {
   return (
-    <section className="rounded-2xl border border-[#E5E5E5] bg-white p-6 text-[#4A4A4A]">
+    <section className="rounded-2xl border border-line bg-white p-6 text-body">
       <h1 className="text-2xl font-bold">Создать проект</h1>
-      <p className="mt-2 text-[#777777]">
+      <p className="mt-2 text-muted">
         Здесь позже появится форма создания проекта.
       </p>
     </section>

@@ -63,26 +63,26 @@ export default function PanoramaViewer({
   }
 
   const buttonClass =
-    'rounded-lg border border-[#E5E5E5] bg-white px-4 py-2 text-sm font-medium text-[#4A4A4A] transition hover:border-[#E23E1A] hover:bg-[#FCEBE7] hover:text-[#E23E1A]'
+    'rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-body transition hover:border-brand hover:bg-brand-soft hover:text-brand'
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#F5F5F5] text-[#4A4A4A]">
-      <header className="flex items-center justify-between gap-4 border-b border-[#E5E5E5] bg-white px-4 py-3">
-        <h2 className="truncate font-semibold text-[#4A4A4A]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-page text-body">
+      <header className="flex items-center justify-between gap-4 border-b border-line bg-white px-4 py-3">
+        <h2 className="truncate font-semibold text-body">
           {title}
         </h2>
 
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg bg-[#E23E1A] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#C93416]"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover"
         >
           Закрыть ✕
         </button>
       </header>
 
       <div
-        className="flex flex-1 touch-none items-center justify-center overflow-hidden bg-[#F5F5F5]"
+        className="flex flex-1 touch-none items-center justify-center overflow-hidden bg-page"
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -102,7 +102,7 @@ export default function PanoramaViewer({
         />
       </div>
 
-      <footer className="flex flex-wrap items-center justify-center gap-3 border-t border-[#E5E5E5] bg-white p-3">
+      <footer className="flex flex-wrap items-center justify-center gap-3 border-t border-line bg-white p-3">
         <button
           type="button"
           onClick={() =>
@@ -113,7 +113,7 @@ export default function PanoramaViewer({
           −
         </button>
 
-        <span className="min-w-16 text-center text-sm font-medium text-[#4A4A4A]">
+        <span className="min-w-16 text-center text-sm font-medium text-body">
           {Math.round(zoom * 100)}%
         </span>
 

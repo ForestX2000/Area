@@ -1,5 +1,5 @@
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
 
 interface CanvasEditorProps {
@@ -16,6 +16,8 @@ interface CanvasEditorProps {
 
 const GRID_COLOR = '#e2e8f0'
 const DIMENSION_COLOR = '#059669'
+const SNAP_COLOR = '#e11d48'
+const SELECT_COLOR = '#2563eb'
 
 function dist(p1: Point, p2: Point): number {
   return Math.hypot(p2.x - p1.x, p2.y - p1.y)
@@ -33,10 +35,18 @@ export default function CanvasEditor({
   onZoomChange,
 }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const objectsRef = useRef(objects)
+  objectsRef.current = objects
+
   const [isDrawing, setIsDrawing] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const [startPoint, setStartPoint] = useState<Point>({ x: 0, y: 0 })
   const [currentPoint, setCurrentPoint] = useState<Point>({ x: 0, y: 0 })
+  const [dragOffset, setDragOffset] = useState<Point>({ x: 0, y: 0 })
   const [nextId, setNextId] = useState(objects.length)
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
+  const [isShiftPressed, setIsShiftPressed] = useState(false)
+  const [snapTarget, setSnapTarget] = useState<Point | null>(null)
 
   const svgPoint = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -53,96 +63,275 @@ export default function CanvasEditor({
     []
   )
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Control') setIsCtrlPressed(true)
+      if (event.key === 'Shift') setIsShiftPressed(true)
+    }
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Control') setIsCtrlPressed(false)
+      if (event.key === 'Shift') setIsShiftPressed(false)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [])
+
+  const snapPoints = useMemo(() => {
+    const points: Point[] = []
+    for (const obj of objectsRef.current) {
+      if (obj.type === 'line') {
+        points.push(obj.points[0], obj.points[1])
+      }
+      if (obj.type === 'rectangle') {
+        const x1 = Math.min(obj.points[0].x, obj.points[1].x)
+        const y1 = Math.min(obj.points[0].y, obj.points[1].y)
+        const x2 = Math.max(obj.points[0].x, obj.points[1].x)
+        const y2 = Math.max(obj.points[0].y, obj.points[1].y)
+        points.push(
+          { x: x1, y: y1 },
+          { x: x2, y: y1 },
+          { x: x1, y: y2 },
+          { x: x2, y: y2 }
+        )
+      }
+    }
+    return points
+  }, [objects])
+
+  const snapRadiusSvg = 14 / zoom
+
+  const findSnapPoint = useCallback(
+    (pt: Point): Point | null => {
+      if (!isShiftPressed) return null
+      let nearest: Point | null = null
+      let minDist = snapRadiusSvg
+      for (const sp of snapPoints) {
+        const d = dist(pt, sp)
+        if (d < minDist) {
+          minDist = d
+          nearest = sp
+        }
+      }
+      return nearest
+    },
+    [isShiftPressed, snapPoints, snapRadiusSvg]
+  )
+
+  const applyGridSnap = useCallback(
+    (pt: Point): Point => {
+      if (!snapToGrid) return pt
+      return {
+        x: Math.round(pt.x / gridSize) * gridSize,
+        y: Math.round(pt.y / gridSize) * gridSize,
+      }
+    },
+    [gridSize, snapToGrid]
+  )
+
+  const findObjectAtPoint = useCallback(
+    (pt: Point): DrawingObject | null => {
+      const threshold = snapToGrid ? gridSize / 2 : 10
+      for (let i = objectsRef.current.length - 1; i >= 0; i--) {
+        const obj = objectsRef.current[i]
+        if (obj.type === 'line') {
+          const [p1, p2] = obj.points
+          if (pointToLineDistance(pt, p1, p2) < threshold) return obj
+        }
+        if (obj.type === 'rectangle') {
+          const first = obj.points[0]
+          const second = obj.points[1]
+          const x = Math.min(first.x, second.x)
+          const y = Math.min(first.y, second.y)
+          const w = Math.abs(second.x - first.x)
+          const h = Math.abs(second.y - first.y)
+          if (
+            pt.x >= x - threshold &&
+            pt.x <= x + w + threshold &&
+            pt.y >= y - threshold &&
+            pt.y <= y + h + threshold
+          ) {
+            return obj
+          }
+        }
+      }
+      return null
+    },
+    [snapToGrid, gridSize]
+  )
+
   const handleMouseDown = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
+      // Перетаскивание выделенного объекта
+      if (tool === 'select' && selectedId) {
+        const pt = svgPoint(event.clientX, event.clientY)
+        const obj = objectsRef.current.find((o) => o.id === selectedId)
+        if (obj) {
+          const x = Math.min(obj.points[0].x, obj.points[1].x)
+          const y = Math.min(obj.points[0].y, obj.points[1].y)
+          const w = Math.abs(obj.points[1].x - obj.points[0].x)
+          const h = Math.abs(obj.points[1].y - obj.points[0].y)
+          if (
+            pt.x >= x - 10 &&
+            pt.x <= x + w + 10 &&
+            pt.y >= y - 10 &&
+            pt.y <= y + h + 10
+          ) {
+            setDragOffset({ x: pt.x - x, y: pt.y - y })
+            setIsDragging(true)
+            setIsDrawing(false)
+            return
+          }
+        }
+      }
+
       if (tool === 'select') {
         const pt = svgPoint(event.clientX, event.clientY)
-        const clicked = findObjectAt(objects, pt, gridSize, snapToGrid)
+        const snapped = findSnapPoint(pt)
+        const clickPt = snapped ?? pt
+        const clicked = findObjectAtPoint(clickPt)
         onSelect(clicked ? clicked.id : null)
+        setSnapTarget(snapped)
         setIsDrawing(false)
+        setIsDragging(false)
         return
       }
 
-      const pt = applySnap(svgPoint(event.clientX, event.clientY), gridSize, snapToGrid)
+      // Рисование нового объекта
+      const rawPt = svgPoint(event.clientX, event.clientY)
+      const snapped = findSnapPoint(rawPt)
+      const pt = snapped ?? applyGridSnap(rawPt)
+      setSnapTarget(snapped)
       setStartPoint(pt)
       setCurrentPoint(pt)
       setIsDrawing(true)
+      setIsDragging(false)
     },
-    [tool, objects, gridSize, snapToGrid, onSelect, svgPoint]
+    [tool, selectedId, onSelect, svgPoint, findSnapPoint, findObjectAtPoint, applyGridSnap]
   )
 
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
+      if (isDragging && selectedId) {
+        const pt = svgPoint(event.clientX, event.clientY)
+        const snapped = findSnapPoint(pt)
+        const finalPt = snapped ?? applyGridSnap(pt)
+        setSnapTarget(snapped)
+
+        const obj = objectsRef.current.find((o) => o.id === selectedId)
+        if (!obj) return
+
+        const dx = finalPt.x - dragOffset.x
+        const dy = finalPt.y - dragOffset.y
+        const w = Math.abs(obj.points[1].x - obj.points[0].x)
+        const h = Math.abs(obj.points[1].y - obj.points[0].y)
+
+        onObjectsChange(
+          objectsRef.current.map((o) => {
+            if (o.id !== selectedId) return o
+            return {
+              ...o,
+              points: [
+                { x: dx, y: dy },
+                { x: dx + w, y: dy + h },
+              ],
+            }
+          })
+        )
+        setCurrentPoint(finalPt)
+        return
+      }
+
       if (!isDrawing) return
-      const pt = applySnap(svgPoint(event.clientX, event.clientY), gridSize, snapToGrid)
+      const rawPt = svgPoint(event.clientX, event.clientY)
+      const snapped = findSnapPoint(rawPt)
+      const pt = snapped ?? applyGridSnap(rawPt)
+      setSnapTarget(snapped)
       setCurrentPoint(pt)
     },
-    [isDrawing, svgPoint, gridSize, snapToGrid]
+    [isDragging, selectedId, objectsRef, onObjectsChange, svgPoint, findSnapPoint, applyGridSnap, dragOffset]
   )
 
-  const handleMouseUp = useCallback(
-    (_event: React.MouseEvent<SVGSVGElement>) => {
-      if (!isDrawing) return
-      const end = applySnap(svgPoint(currentPoint.x, currentPoint.y), gridSize, snapToGrid)
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset({ x: 0, y: 0 })
+      setSnapTarget(null)
+      return
+    }
 
-      let newObject: DrawingObject | null = null
-      const newId = `obj-${nextId}`
+    if (!isDrawing) return
+    const snapped = findSnapPoint(currentPoint)
+    const end = snapped ?? applyGridSnap(currentPoint)
 
-      if (tool === 'line') {
-        newObject = {
-          id: newId,
-          type: 'line',
-          points: [startPoint, end],
-          stroke: '#1e293b',
-          strokeWidth: 2,
-        }
-      } else if (tool === 'rectangle') {
-        const x = Math.min(startPoint.x, end.x)
-        const y = Math.min(startPoint.y, end.y)
-        newObject = {
-          id: newId,
-          type: 'rectangle',
-          points: [{ x, y }, { x: x + Math.abs(end.x - startPoint.x), y: y + Math.abs(end.y - startPoint.y) }],
-          stroke: '#1e293b',
-          strokeWidth: 2,
-          fill: 'rgba(37, 99, 235, 0.05)',
-        }
-      } else if (tool === 'square') {
-        const size = Math.min(Math.abs(end.x - startPoint.x), Math.abs(end.y - startPoint.y))
-        const dx = end.x >= startPoint.x ? size : -size
-        const dy = end.y >= startPoint.y ? size : -size
-        newObject = {
-          id: newId,
-          type: 'rectangle',
-          points: [startPoint, { x: startPoint.x + dx, y: startPoint.y + dy }],
-          stroke: '#1e293b',
-          strokeWidth: 2,
-          fill: 'rgba(37, 99, 235, 0.05)',
-          width: size,
-          height: size,
-          isSquare: true,
-        }
+    const newId = `obj-${nextId}`
+    const w = Math.abs(end.x - startPoint.x)
+    const h = Math.abs(end.y - startPoint.y)
+
+    let newObject: DrawingObject | null = null
+
+    if (tool === 'line') {
+      newObject = {
+        id: newId,
+        type: 'line',
+        points: [startPoint, end],
+        stroke: '#1e293b',
+        strokeWidth: 2,
       }
-
-      if (newObject) {
-        onObjectsChange([...objects, newObject])
-        setNextId(nextId + 1)
-        onSelect(newObject.id)
+    } else if (tool === 'rectangle') {
+      const x = Math.min(startPoint.x, end.x)
+      const y = Math.min(startPoint.y, end.y)
+      newObject = {
+        id: newId,
+        type: 'rectangle',
+        points: [{ x, y }, { x: x + w, y: y + h }],
+        stroke: '#1e293b',
+        strokeWidth: 2,
+        fill: 'rgba(37, 99, 235, 0.05)',
+        width: w,
+        height: h,
       }
+    } else if (tool === 'square') {
+      const size = Math.min(w, h)
+      const dx = end.x >= startPoint.x ? size : -size
+      const dy = end.y >= startPoint.y ? size : -size
+      newObject = {
+        id: newId,
+        type: 'rectangle',
+        points: [startPoint, { x: startPoint.x + dx, y: startPoint.y + dy }],
+        stroke: '#1e293b',
+        strokeWidth: 2,
+        fill: 'rgba(37, 99, 235, 0.05)',
+        width: size,
+        height: size,
+        isSquare: true,
+      }
+    }
 
-      setIsDrawing(false)
-    },
-    [tool, startPoint, currentPoint, objects, nextId, onObjectsChange, onSelect, gridSize, snapToGrid]
-  )
+    if (newObject) {
+      onObjectsChange([...objectsRef.current, newObject])
+      setNextId(nextId + 1)
+      onSelect(newObject.id)
+    }
+
+    setIsDrawing(false)
+    setSnapTarget(null)
+  }, [tool, startPoint, currentPoint, nextId, onObjectsChange, onSelect, findSnapPoint, applyGridSnap])
 
   const handleWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
+    (event: React.WheelEvent<SVGSVGElement>) => {
+      if (!isCtrlPressed) return
       event.preventDefault()
       const delta = -event.deltaY * 0.001
       const newZoom = Math.min(4, Math.max(0.25, zoom + delta))
       onZoomChange(newZoom)
     },
-    [onZoomChange, zoom]
+    [isCtrlPressed, onZoomChange, zoom]
   )
 
   const previewObject = useMemo(() => {
@@ -177,23 +366,17 @@ export default function CanvasEditor({
     } as DrawingObject
   }, [isDrawing, tool, startPoint, currentPoint, nextId])
 
-  const dimensionText = useMemo(() => {
-    if (!isDrawing || tool === 'select') return ''
-    const d = dist(startPoint, currentPoint)
-    return `${(d / 100).toFixed(2)} м`
-  }, [isDrawing, tool, startPoint, currentPoint])
+  const selectedObj = objectsRef.current.find((o) => o.id === selectedId)
 
   return (
-    <div
-      className="relative w-full h-full bg-slate-50 overflow-hidden"
-      onWheel={handleWheel as unknown as React.WheelEventHandler<HTMLDivElement>}
-    >
+    <div className="relative w-full h-full bg-slate-50 overflow-hidden">
       <svg
         ref={svgRef}
         className="w-full h-full block"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
       >
         <defs>
           <pattern
@@ -203,12 +386,12 @@ export default function CanvasEditor({
             patternUnits="userSpaceOnUse"
           >
             <path
-              d="M 0 0 L 0 0"
+              d={`M 0 0 L ${gridSize * zoom} 0`}
               stroke={GRID_COLOR}
               strokeWidth="0.5"
             />
             <path
-              d={`M ${gridSize * zoom} 0 L 0 0 0 ${gridSize * zoom}`}
+              d={`M 0 0 L 0 ${gridSize * zoom}`}
               stroke={GRID_COLOR}
               strokeWidth="0.5"
             />
@@ -216,20 +399,41 @@ export default function CanvasEditor({
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
 
-        {objects.map((obj) => {
+        {objectsRef.current.map((obj) => {
           const isSelected = obj.id === selectedId
           if (obj.type === 'line') {
             return (
-              <line
-                key={obj.id}
-                x1={obj.points[0].x}
-                y1={obj.points[0].y}
-                x2={obj.points[1].x}
-                y2={obj.points[1].y}
-                stroke={obj.stroke ?? '#1e293b'}
-                strokeWidth={obj.strokeWidth ?? 2}
-                className={isSelected ? 'cursor-move' : ''}
-              />
+              <g key={obj.id}>
+                <line
+                  x1={obj.points[0].x}
+                  y1={obj.points[0].y}
+                  x2={obj.points[1].x}
+                  y2={obj.points[1].y}
+                  stroke={obj.stroke ?? '#1e293b'}
+                  strokeWidth={obj.strokeWidth ?? 2}
+                  className={isSelected ? 'cursor-move' : ''}
+                />
+                {isSelected && (
+                  <>
+                    <circle
+                      cx={obj.points[0].x}
+                      cy={obj.points[0].y}
+                      r={4 / zoom}
+                      fill={SELECT_COLOR}
+                      stroke="white"
+                      strokeWidth="1"
+                    />
+                    <circle
+                      cx={obj.points[1].x}
+                      cy={obj.points[1].y}
+                      r={4 / zoom}
+                      fill={SELECT_COLOR}
+                      stroke="white"
+                      strokeWidth="1"
+                    />
+                  </>
+                )}
+              </g>
             )
           }
           if (obj.type === 'rectangle') {
@@ -238,17 +442,49 @@ export default function CanvasEditor({
             const w = Math.abs(obj.points[1].x - obj.points[0].x)
             const h = Math.abs(obj.points[1].y - obj.points[0].y)
             return (
-              <rect
-                key={obj.id}
-                x={x}
-                y={y}
-                width={w}
-                height={h}
-                stroke={obj.stroke ?? '#1e293b'}
-                strokeWidth={obj.strokeWidth ?? 2}
-                fill={obj.fill ?? 'transparent'}
-                className={isSelected ? 'cursor-move' : ''}
-              />
+              <g key={obj.id}>
+                <rect
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={h}
+                  stroke={obj.stroke ?? '#1e293b'}
+                  strokeWidth={obj.strokeWidth ?? 2}
+                  fill={obj.fill ?? 'transparent'}
+                  className={isSelected ? 'cursor-move' : ''}
+                />
+                {isSelected && (
+                  <>
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={4 / zoom}
+                      fill={SELECT_COLOR}
+                      stroke="white"
+                      strokeWidth="1"
+                    />
+                    <circle
+                      cx={x + w}
+                      cy={y + h}
+                      r={4 / zoom}
+                      fill={SELECT_COLOR}
+                      stroke="white"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={x + w / 2}
+                      y={y - 8}
+                      fill={DIMENSION_COLOR}
+                      fontSize={12 / zoom}
+                      fontWeight="700"
+                      textAnchor="middle"
+                      pointerEvents="none"
+                    >
+                      {w.toFixed(0)} × {h.toFixed(0)}
+                    </text>
+                  </>
+                )}
+              </g>
             )
           }
           return null
@@ -282,7 +518,7 @@ export default function CanvasEditor({
           </>
         )}
 
-        {isDrawing && dimensionText && tool !== 'select' && (
+        {isDrawing && tool !== 'select' && (
           <text
             x={(startPoint.x + currentPoint.x) / 2}
             y={(startPoint.y + currentPoint.y) / 2 - 10}
@@ -292,59 +528,34 @@ export default function CanvasEditor({
             textAnchor="middle"
             pointerEvents="none"
           >
-            {dimensionText}
+            {Math.abs(currentPoint.x - startPoint.x).toFixed(0)} ×
+            {Math.abs(currentPoint.y - startPoint.y).toFixed(0)}
           </text>
+        )}
+
+        {snapTarget && isShiftPressed && (
+          <circle
+            cx={snapTarget.x}
+            cy={snapTarget.y}
+            r={14 / zoom}
+            fill={SNAP_COLOR}
+            stroke="white"
+            strokeWidth="1.5"
+            pointerEvents="none"
+            filter="drop-shadow(0 0 2px rgba(225, 29, 72, 0.6))"
+          />
         )}
       </svg>
 
-      {isDrawing && dimensionText && tool !== 'select' && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-md border border-slate-200 shadow-sm text-sm font-medium text-slate-700">
-          {dimensionText}
+      {selectedObj && selectedId && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-md border border-slate-200 shadow-sm text-sm font-medium text-slate-700">
+          {selectedObj.type === 'rectangle'
+            ? `${Math.abs(selectedObj.points[1].x - selectedObj.points[0].x).toFixed(0)} × ${Math.abs(selectedObj.points[1].y - selectedObj.points[0].y).toFixed(0)} м`
+            : 'Линия'}
         </div>
       )}
     </div>
   )
-}
-
-function applySnap(pt: Point, gridSize: number, snapToGrid: boolean): Point {
-  if (!snapToGrid) return pt
-  return {
-    x: Math.round(pt.x / gridSize) * gridSize,
-    y: Math.round(pt.y / gridSize) * gridSize,
-  }
-}
-
-function findObjectAt(
-  objects: DrawingObject[],
-  pt: Point,
-  gridSize: number,
-  snapToGrid: boolean
-): DrawingObject | null {
-  const threshold = snapToGrid ? gridSize / 2 : 10
-  for (let i = objects.length - 1; i >= 0; i--) {
-    const obj = objects[i]
-    if (obj.type === 'line') {
-      const [p1, p2] = obj.points
-      if (pointToLineDistance(pt, p1, p2) < threshold) return obj
-    }
-    if (obj.type === 'rectangle') {
-      const first = obj.points[0]
-      const second = obj.points[1]
-      const x = Math.min(first.x, second.x)
-      const y = Math.min(first.y, second.y)
-      const w = Math.abs(second.x - first.x)
-      const h = Math.abs(second.y - first.y)
-      if (
-        pt.x >= x - threshold &&
-        pt.x <= x + w + threshold &&
-        pt.y >= y - threshold &&
-        pt.y <= y + h + threshold
-      ) {
-        return obj
-      }
-    }
-  }
-  return null
 }
 
 function pointToLineDistance(p: Point, l1: Point, l2: Point): number {

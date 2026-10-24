@@ -55,15 +55,17 @@ function ProjectCard({
 
         <Link
           to={`/projects/${id}`}
-          className="project-open mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-border"
+          className="project-open mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-[13px] font-normal leading-normal text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-border"
         >
           Открыть проект <span aria-hidden="true">→</span>
         </Link>
         {onDelete && (
-          <button type="button" onClick={onDelete}
-            className="mt-3 self-start rounded-lg px-3 py-2 text-xs font-semibold text-muted transition hover:bg-brand-soft hover:text-brand">
-            Удалить
-          </button>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+            <button type="button" onClick={onDelete}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-muted transition hover:bg-brand-soft hover:text-brand">
+              Удалить
+            </button>
+          </div>
         )}
       </div>
     </article>

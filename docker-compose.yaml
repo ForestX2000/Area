@@ -1,0 +1,36 @@
+
+services:
+  # ----------------------------------------------------------
+  # Фронтенд (React + Vite, статика через nginx)
+  # ----------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000/api
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Бэкенд (FastAPI)
+  # ----------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=Area API
+      - APP_VERSION=0.1.0
+      - DEBUG=true
+    restart: unless-stopped
+
+volumes:
+  project-data:

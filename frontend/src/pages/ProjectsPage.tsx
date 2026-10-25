@@ -189,7 +189,7 @@ function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-page text-body">
-      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <div className="mx-auto max-w-[1400px] py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <section className="mb-9">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">
             Твоё пространство

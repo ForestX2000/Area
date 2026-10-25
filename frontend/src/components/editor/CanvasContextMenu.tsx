@@ -12,7 +12,7 @@ export default function CanvasContextMenu({ x, y, items, onClose }: { x: number;
     if (!menu) return
     const { width, height } = menu.getBoundingClientRect()
     setPosition({ left: Math.max(8, Math.min(x, window.innerWidth - width - 8)), top: Math.max(8, Math.min(y, window.innerHeight - height - 8)) })
-    menu.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
+    menu.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus({ preventScroll: true })
   }, [x, y])
 
   useEffect(() => {
@@ -39,13 +39,13 @@ export default function CanvasContextMenu({ x, y, items, onClose }: { x: number;
   }
 
   return <div ref={ref} role="menu" aria-label="Действия на холсте" onKeyDown={handleKeyDown} onContextMenu={(event) => event.preventDefault()}
-    style={position} className="fixed z-50 min-w-56 rounded-xl border border-line bg-surface p-1 text-sm text-body shadow-xl">
+    style={position} className="fixed z-50 max-h-[calc(100dvh-16px)] min-w-56 max-w-[calc(100vw-16px)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-1 text-sm text-body shadow-xl">
     {items.map((item, index) => item === 'separator'
       ? <div key={index} role="separator" className="my-1 border-t border-line" />
       : <button key={index} type="button" role="menuitem" disabled={item.disabled}
         onClick={() => { onClose(); item.onSelect() }}
-        className={`flex w-full items-center justify-between gap-6 rounded-lg px-3 py-1.5 text-left outline-none enabled:hover:bg-surface-muted enabled:focus:bg-surface-muted disabled:opacity-40 ${item.danger ? 'text-brand-hover' : ''}`}>
-        <span>{item.label}</span>{item.shortcut && <span className="text-xs text-muted">{item.shortcut}</span>}
+        className={`flex min-h-11 w-full items-center justify-between gap-6 rounded-lg px-3 py-1.5 text-left outline-none enabled:hover:bg-surface-muted enabled:focus:bg-surface-muted disabled:opacity-40 lg:min-h-0 ${item.danger ? 'text-brand-hover' : ''}`}>
+        <span>{item.label}</span>{item.shortcut && <span className="hidden text-xs text-muted lg:inline">{item.shortcut}</span>}
       </button>)}
   </div>
 }

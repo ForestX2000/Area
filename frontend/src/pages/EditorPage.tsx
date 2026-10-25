@@ -42,6 +42,9 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
   const [tool, setTool] = useState<DrawingTool>('select')
+  const [mobilePanel, setMobilePanel] = useState<'tools' | 'properties' | 'actions' | null>(null)
+  const [panMode, setPanMode] = useState(false)
+  const [multiSelect, setMultiSelect] = useState(false)
   const [gridSize, setGridSize] = useState(0.5)
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [zoom, setZoom] = useState(1)
@@ -218,6 +221,16 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     setSelectedVertex(null)
   }, [])
 
+  function changeTool(next: DrawingTool) {
+    setTool(next)
+    setPanMode(false)
+    setMultiSelect(false)
+    setMobilePanel(null)
+    if (next === 'marker-service') setShowServiceMarks(true)
+    if (next !== 'vertices') setSelectedIds([])
+    setSelectedVertex(null)
+  }
+
   const handleUpdate = useCallback(
     (updates: Partial<DrawingObject>) => {
       if (!selectedId) return
@@ -375,20 +388,24 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
   }
 
   return (
-    <div className="bg-surface-muted">
+    <div className="project-editor bg-surface-muted" onKeyDown={(event) => {
+      if (event.key === 'Escape' && mobilePanel) { setMobilePanel(null); event.stopPropagation() }
+    }}>
       <EditorNavigation projectId={projectId} />
-      <div className="grid overflow-hidden rounded-b-xl border border-line md:h-[calc(100dvh-12rem)] md:min-h-[38rem] md:grid-cols-[240px_minmax(0,1fr)_240px]">
-        <aside aria-label="Свойства и объекты" className="order-3 overflow-y-auto border-l border-line bg-surface">
+      {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
+      <div className="editor-workspace relative grid min-h-0 overflow-hidden border border-line lg:h-[calc(100dvh-12rem)] lg:min-h-[38rem] lg:grid-cols-[240px_minmax(0,1fr)_240px] lg:rounded-b-xl">
+        <aside id="editor-properties" aria-label="Свойства и объекты" className={`editor-panel editor-properties order-3 overflow-y-auto border-l border-line bg-surface ${mobilePanel === 'properties' ? 'is-open' : ''}`}>
+          <div className="editor-panel-heading"><h2>Свойства и объекты</h2><button type="button" aria-label="Закрыть свойства" onClick={() => setMobilePanel(null)}>×</button></div>
           <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
             panoramaError={panoramaError} onOpenPanorama={() => { if (selected) openMarkerPanorama(selected) }}
             onUploadPanorama={handleMarkerPanoramaUpload} onDeletePanorama={handleMarkerPanoramaDelete}
             onStitchPanorama={() => setStitchOpen(true)}
-            selectedVertex={selectedVertex} onEditVertices={() => setTool('vertices')}
+            selectedVertex={selectedVertex} onEditVertices={() => changeTool('vertices')}
             onAddVertex={() => {
               if (!selected || !canAddVertex(selected)) return
               const added = addVertex(selected)
               handleObjectsChange(objects.map((object) => object.id === selected.id ? added.object : object))
-              setTool('vertices'); setSelectedVertex(added.index)
+              setTool('vertices'); setPanMode(false); setSelectedVertex(added.index); setMobilePanel(null)
             }}
             onDeleteVertex={() => {
               if (!selected || selectedVertex === null || !canDeleteVertex(selected)) return
@@ -401,8 +418,8 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
             <ul className="space-y-1">{objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object, index) => <li key={object.id}>
               <button type="button" aria-pressed={selectedIds.includes(object.id)}
                 onClick={(event) => {
-                  const ids = event.shiftKey || event.ctrlKey ? selectedIds.includes(object.id) ? selectedIds.filter((id) => id !== object.id) : [...selectedIds, object.id] : [object.id]
-                  handleSelect(ids); if (tool !== 'vertices') setTool('select')
+                  const ids = event.shiftKey || event.ctrlKey || multiSelect ? selectedIds.includes(object.id) ? selectedIds.filter((id) => id !== object.id) : [...selectedIds, object.id] : [object.id]
+                  handleSelect(ids); setPanMode(false); if (tool !== 'vertices') setTool('select')
                 }} className={`w-full truncate rounded-lg px-3 py-2 text-left text-xs ${selectedIds.includes(object.id) ? 'bg-brand-soft text-brand' : 'hover:bg-surface-muted'}`}>
                 {object.label || `${objectName(object)} ${index + 1}`}
               </button>
@@ -410,18 +427,31 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
             {objects.length === 0 && <p className="text-xs text-muted">Пока нет объектов</p>}
           </section>
         </aside>
-        <div className="order-1 h-96 min-w-0 md:order-2 md:h-full">
+        <div className="editor-canvas relative order-1 min-h-0 min-w-0 lg:order-2 lg:h-full">
           <CanvasEditor objects={objects} onObjectsChange={handleObjectsChange} selectedIds={selectedIds} onSelect={handleSelect}
             tool={tool} gridSize={gridSize} snapToGrid={snapToGrid} zoom={zoom} onZoomChange={setZoom}
+            panMode={panMode} multiSelect={multiSelect}
             selectedVertex={selectedVertex} onVertexSelect={setSelectedVertex} showServiceMarks={showServiceMarks}
             onActivateMarker={activateMarker}
             onContextMenu={({ clientX, clientY, point, objectId }) => { setMenu({ x: clientX, y: clientY, point, objectId }); setMenuOpens((count) => count + 1) }}
             overlay={<RouteOverlay result={routeResult} floorId={floorId} zoom={zoom} />} />
+          <div aria-label="Быстрые действия" className="editor-quick-actions absolute left-2 right-2 top-2 flex items-start justify-between gap-2 lg:hidden">
+            <div className="flex rounded-xl border border-line bg-surface shadow-sm">
+              <button type="button" aria-label="Отменить действие" disabled={!history.past.length} onClick={handleUndo}>↶</button>
+              <button type="button" aria-label="Вернуть действие" disabled={!history.future.length} onClick={handleRedo}>↷</button>
+            </div>
+            <div className="flex rounded-xl border border-line bg-surface shadow-sm">
+              <button type="button" aria-label="Уменьшить" onClick={() => setZoom((value) => Math.max(0.25, value - 0.25))}>−</button>
+              <span className="self-center text-xs tabular-nums">{Math.round(zoom * 100)}%</span>
+              <button type="button" aria-label="Увеличить" onClick={() => setZoom((value) => Math.min(4, value + 0.25))}>+</button>
+            </div>
+          </div>
         </div>
-        <aside aria-label="Панель инструментов" className="order-2 overflow-y-auto border-r border-line md:order-1">
+        <aside id="editor-tools" aria-label="Панель инструментов" className={`editor-panel editor-tools order-2 overflow-y-auto border-r border-line bg-surface lg:order-1 ${mobilePanel === 'tools' ? 'is-open' : ''}`}>
+          <div className="editor-panel-heading"><h2>Инструменты и настройки</h2><button type="button" aria-label="Закрыть инструменты" onClick={() => setMobilePanel(null)}>×</button></div>
           <EditorToolbar
             tool={tool}
-            onToolChange={(next) => { setTool(next); if (next === 'marker-service') setShowServiceMarks(true); if (next !== 'vertices') setSelectedIds([]); setSelectedVertex(null) }}
+            onToolChange={changeTool}
             gridSize={gridSize}
             onGridSizeChange={setGridSize}
             snapToGrid={snapToGrid}
@@ -439,10 +469,34 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
             <RoutePanel floors={floors} request={route} result={routeResult} currentFloorId={floorId} onChange={setRoute} onGoToFloor={goToFloor} />
           </EditorToolbar>
         </aside>
-
+        {mobilePanel === 'actions' && <section id="editor-actions" aria-label="Действия с объектами" className="editor-panel is-open bg-surface lg:hidden">
+          <div className="editor-panel-heading"><h2>Действия с объектами</h2><button type="button" aria-label="Закрыть действия" onClick={() => setMobilePanel(null)}>×</button></div>
+          <div className="grid grid-cols-2 gap-2 p-3">
+            <button type="button" aria-pressed={multiSelect} className="mobile-action" onClick={() => { setMultiSelect((value) => !value); setTool('select'); setPanMode(false); setMobilePanel(null) }}>Выбрать несколько</button>
+            <button type="button" className="mobile-action" onClick={() => { handleSelect(objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object) => object.id), true); setPanMode(false); setMobilePanel(null) }}>Выделить всё</button>
+            <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => { copySelection(); setMobilePanel(null) }}>Копировать</button>
+            <button type="button" className="mobile-action" disabled={!hasClipboard} onClick={() => { pasteObjects(clipboard); setMobilePanel(null) }}>Вставить</button>
+            <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => { pasteObjects(objects.filter((object) => selectedIds.includes(object.id))); setMobilePanel(null) }}>Дублировать</button>
+            <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => { rotateSelection(90); setMobilePanel(null) }}>Повернуть на 90°</button>
+            <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => reorderSelection(true)}>На передний план</button>
+            <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => reorderSelection(false)}>На задний план</button>
+            {selected && <>
+              <button type="button" className="mobile-action" onClick={() => { setRoute({ ...route, from: { floorId, objectId: selected.id } }); setMobilePanel(null) }}>Маршрут отсюда</button>
+              <button type="button" className="mobile-action" onClick={() => { setRoute({ ...route, to: { floorId, objectId: selected.id } }); setMobilePanel(null) }}>Маршрут сюда</button>
+              {selected.markerKind === 'navigation' && (selected.panoramaKey || selected.targetProjectId) && <button type="button" className="mobile-action" onClick={() => { activateMarker(selected); setMobilePanel(null) }}>{selected.panoramaKey ? 'Открыть панораму' : 'Открыть связанную карту'}</button>}
+            </>}
+            <button type="button" className="mobile-action text-brand" disabled={!selectedIds.length} onClick={() => { handleDelete(); setMobilePanel(null) }}>Удалить выбранное</button>
+          </div>
+        </section>}
       </div>
+      <nav aria-label="Управление чертежом" className="editor-mobile-bar grid grid-cols-5 border-t border-line bg-surface lg:hidden">
+        <button type="button" aria-label="Выделение на холсте" aria-pressed={!panMode && tool === 'select'} onClick={() => changeTool('select')}><span aria-hidden="true">↖</span><span>Выбрать</span></button>
+        <button type="button" aria-label="Перемещение холста" aria-pressed={panMode} onClick={() => { setPanMode((value) => !value); setMobilePanel(null) }}><span aria-hidden="true">✥</span><span>Двигать</span></button>
+        <button type="button" aria-label="Открыть инструменты" aria-expanded={mobilePanel === 'tools'} aria-controls="editor-tools" onClick={() => setMobilePanel((panel) => panel === 'tools' ? null : 'tools')}><span aria-hidden="true">＋</span><span>Инструменты</span></button>
+        <button type="button" aria-label="Открыть свойства" aria-expanded={mobilePanel === 'properties'} aria-controls="editor-properties" onClick={() => setMobilePanel((panel) => panel === 'properties' ? null : 'properties')}><span aria-hidden="true">☷{selectedIds.length > 0 && <small className="ml-1 text-xs">{selectedIds.length}</small>}</span><span>Свойства</span></button>
+        <button type="button" aria-label="Открыть действия" aria-expanded={mobilePanel === 'actions'} aria-controls={mobilePanel === 'actions' ? 'editor-actions' : undefined} onClick={() => { setMobilePanel((panel) => panel === 'actions' ? null : 'actions'); setMenuOpens((count) => count + 1) }}><span aria-hidden="true">⋯</span><span>Действия</span></button>
+      </nav>
       {menu && <CanvasContextMenu x={menu.x} y={menu.y} items={menuItems(menu)} onClose={closeMenu} />}
-      {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
       {stitchOpen && selected && (
         <PanoramaStitchDialog
           title={selected.label || objectName(selected)}

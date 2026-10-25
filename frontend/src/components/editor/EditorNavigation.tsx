@@ -32,7 +32,7 @@ export default function EditorNavigation({ projectId, mode = '2d', can3D, onMode
       .catch(() => { if (!cancelled) setHasPanorama(false) })
     return () => { cancelled = true }
   }, [storageId, can3D])
-  return <nav aria-label="Навигация редактора" className="flex w-full flex-wrap items-center justify-center gap-3 border-b border-line bg-surface px-3 py-3">
+  return <nav aria-label="Навигация редактора" className="editor-navigation flex w-full flex-wrap items-center justify-center gap-3 border-b border-line bg-surface px-3 py-3">
     {onBack ? <button type="button" onClick={onBack} aria-label="К 2D-карте" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">←</button>
       : <Link to={`/projects/${projectId}`} aria-label="Назад к проекту" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">←</Link>}
     <span className="max-w-60 truncate text-sm font-semibold text-ink" title={project?.name}>{project?.name ?? 'Проект'}</span>

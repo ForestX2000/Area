@@ -54,7 +54,7 @@ export default function FloorPicker({ project, mode = '2d' }: { project: Project
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить название этажа.') }
   }
 
-  return <div ref={rootRef} className="relative min-w-0 max-w-full"
+  return <div ref={rootRef} className="editor-floor-picker relative min-w-0 max-w-full"
     onKeyDown={(event) => {
       if (event.key === 'Escape') {
         event.preventDefault(); event.stopPropagation()
@@ -68,7 +68,7 @@ export default function FloorPicker({ project, mode = '2d' }: { project: Project
       className="inline-flex max-w-48 items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">
       <span className="truncate">Этаж: {active.name}</span><span aria-hidden="true" className="text-xs text-muted">▾</span>
     </button>
-    {open && <div id={pickerId} role="dialog" aria-label="Этажи" className="absolute left-1/2 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-line bg-surface p-2 text-body shadow-xl">
+    {open && <div id={pickerId} role="dialog" aria-label="Этажи" className="editor-floor-menu absolute left-1/2 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-line bg-surface p-2 text-body shadow-xl">
       <p className="px-2 py-2 text-xs font-semibold uppercase tracking-wider text-muted">Этажи</p>
       <ul aria-label="Список этажей" className="max-h-64 space-y-1 overflow-y-auto">
         {floors.map((floor) => <li key={floor.id} className={`flex min-w-0 items-center gap-1 rounded-lg ${active.id === floor.id ? 'bg-brand-soft' : 'hover:bg-surface-muted'}`}>

@@ -173,7 +173,7 @@ export default function EditorTutorial({ context, onClose }: { context: Tutorial
           <button type="button" onClick={() => setProgress(snapshot(context, 1))} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover">Начать</button>
         </> : last
           ? <button type="button" onClick={finish} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover">Завершить</button>
-          : <button type="button" onClick={() => setProgress(snapshot(context, progress.index + 1, progress))} className="rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface-muted">Пропустить шаг</button>}
+          : <button type="button" onClick={() => setProgress(snapshot(context, progress.index + 1, progress))} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover">Далее</button>}
       </div>
       </>}
     </div>

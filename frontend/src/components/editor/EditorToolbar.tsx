@@ -40,7 +40,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Инструменты</h2>
         {props.onStartTutorial && <button type="button" onClick={props.onStartTutorial} title="Пройти интерактивное обучение"
-          className="rounded-full border border-brand-border px-2 py-0.5 text-[11px] font-semibold text-brand hover:bg-brand-soft">? Обучение</button>}
+          className="rounded-full border border-brand-border px-2 py-0.5 text-[11px] font-semibold text-brand hover:bg-brand-soft">Обучение</button>}
       </div>
       <div className="grid grid-cols-2 gap-1.5">{SHAPE_TOOLS.map((item) =>
         <button key={item.id} type="button" aria-label={item.label} aria-pressed={props.tool === item.id} title={item.label} onClick={() => props.onToolChange(item.id)}
@@ -75,8 +75,8 @@ export default function EditorToolbar(props: EditorToolbarProps) {
           onChange={(event) => props.onGridSizeChange(Math.min(100, Math.max(0.1, Number(event.target.value) || 0.1)))} className={inputClass} />м</span>
       </label>
       <div className="flex items-center justify-between gap-1">
-        <button type="button" aria-label="Уменьшить масштаб холста" onClick={() => props.onZoomChange(Math.max(MIN_ZOOM, props.zoom - 0.25))} className={buttonClass}>−</button>
-        <label className="flex items-center gap-1 text-xs"><input type="number" aria-label="Масштаб холста в процентах" min="25" max="400" step="1" value={zoomInput ?? Math.round(props.zoom * 100)}
+        <button type="button" aria-label="Уменьшить масштаб холста" onClick={() => props.onZoomChange(Math.max(MIN_ZOOM, props.zoom > 0.25 ? props.zoom - 0.25 : props.zoom / 2))} className={buttonClass}>−</button>
+        <label className="flex items-center gap-1 text-xs"><input type="number" aria-label="Масштаб холста в процентах" min="1" max="400" step="1" value={zoomInput ?? Math.round(props.zoom * 100)}
           onChange={(event) => setZoomInput(event.target.value)} onBlur={commitZoom}
           onKeyDown={(event) => { if (event.key === 'Enter') { commitZoom(); event.currentTarget.blur() } if (event.key === 'Escape') setZoomInput(null) }} className={inputClass} />%</label>
         <button type="button" aria-label="Увеличить масштаб холста" onClick={() => props.onZoomChange(Math.min(MAX_ZOOM, props.zoom + 0.25))} className={buttonClass}>+</button>

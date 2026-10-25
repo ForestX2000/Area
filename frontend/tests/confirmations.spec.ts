@@ -43,9 +43,9 @@ test('project confirmation supports cancellation, focus trapping and explicit de
 
 test('Workspace card confirmation fits a narrow screen and preserves maps', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Все здания', exact: true }) })
-  await card.getByRole('button', { name: 'Удалить', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Удалить Workspace?', exact: true })
+  const card = page.getByRole('article', { name: 'Папка: Все здания', exact: true })
+  await card.getByRole('button', { name: 'Удалить папку Все здания', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Удалить папку?', exact: true })
   await expect(dialog).toContainText('Карты останутся в проектах')
   const bounds = (await dialog.boundingBox())!
   expect(bounds.x).toBeGreaterThanOrEqual(0)
@@ -53,7 +53,7 @@ test('Workspace card confirmation fits a narrow screen and preserves maps', asyn
   await page.screenshot({ path: testInfo.outputPath('delete-confirmation-mobile.png') })
   await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
   await expect(card).toBeVisible()
-  await card.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await card.getByRole('button', { name: 'Удалить папку Все здания', exact: true }).click()
   await dialog.getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(card).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Главный офис', exact: true })).toBeVisible()

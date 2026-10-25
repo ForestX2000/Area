@@ -319,8 +319,8 @@ test('empty projects, malformed layouts and storage errors keep navigation usabl
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Нет Workspace' })).toBeVisible()
   await createFromProjects(page, 'Пустой Workspace')
-  await expect(surface(page).getByText('Добавьте карты из списка «Все карты».', { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Создать проект' })).toBeVisible()
+  await expect(surface(page).getByText('Добавьте карты в Workspace', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Создать первую карту' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('workspace-mobile.png'), fullPage: true })
   await page.evaluate(() => {

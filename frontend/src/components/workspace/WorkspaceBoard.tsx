@@ -342,7 +342,7 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
           <div className="mt-5 border-t border-line pt-4">
             <h2 className="text-sm font-semibold text-ink">Все карты · {projects.length}</h2>
             <button type="button" disabled={workspace.nodes.length === projects.length} onClick={() => add(projects.map((project) => project.id))} className={`${buttonClass} my-3 w-full`}>Добавить все карты</button>
-            {projects.length === 0 && <Link to="/" className="text-sm text-brand">Создать проект →</Link>}
+            {projects.length === 0 && <Link to="/" className="text-sm text-brand">Создать первую карту →</Link>}
             <ul className="space-y-2">
               {projects.map((project) => {
                 const node = workspace.nodes.find((node) => node.projectId === project.id)

@@ -286,8 +286,21 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     }))
   }, [])
 
+  // Переключатель 3D открывает последнюю просмотренную панораму; её id запоминаем на время вкладки.
+  const lastPanoramaKey = `space-map-last-panorama:${storageId}`
+  function rememberPanorama(id: string) {
+    try { sessionStorage.setItem(lastPanoramaKey, id) } catch { /* без запоминания откроется первая панорама */ }
+  }
+  function openLastPanorama() {
+    let last: string | null = null
+    try { last = sessionStorage.getItem(lastPanoramaKey) } catch { /* см. выше */ }
+    const target = navigationPanoramas.find((object) => object.id === last) ?? navigationPanoramas[0]
+    if (target) openMarkerPanorama(target)
+  }
+
   function openMarkerPanorama(object: DrawingObject) {
     setPanoramaError('')
+    rememberPanorama(object.id)
     setViewer({ id: object.id, title: object.label || objectName(object) })
   }
 
@@ -374,13 +387,13 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
         <div className="text-center">
           <h2 className="text-xl font-bold text-ink">Редактор чертежей</h2>
           <p className="mt-2 text-muted">
-            Выберите проект, чтобы открыть редактор планировки.
+            Выберите карту, чтобы открыть редактор планировки.
           </p>
           <Link
             to="/"
             className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand-hover"
           >
-            ← Назад к проектам
+            ← Назад к картам
           </Link>
         </div>
       </div>
@@ -391,7 +404,8 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     <div className="project-editor bg-surface-muted" onKeyDown={(event) => {
       if (event.key === 'Escape' && mobilePanel) { setMobilePanel(null); event.stopPropagation() }
     }}>
-      <EditorNavigation projectId={projectId} />
+      <EditorNavigation projectId={projectId} can3D={navigationPanoramas.length > 0 ? true : undefined}
+        onModeChange={navigationPanoramas.length > 0 ? openLastPanorama : () => navigate(floorUrl(`/projects/${projectId}/map?mode=3d`, floorId, true))} />
       {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
       <div className="editor-workspace relative grid min-h-0 overflow-hidden border border-line lg:h-[calc(100dvh-12rem)] lg:min-h-[38rem] lg:grid-cols-[240px_minmax(0,1fr)_240px] lg:rounded-b-xl">
         <aside id="editor-properties" aria-label="Свойства и объекты" className={`editor-panel editor-properties order-3 overflow-y-auto border-l border-line bg-surface ${mobilePanel === 'properties' ? 'is-open' : ''}`}>
@@ -399,7 +413,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
           <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
             panoramaError={panoramaError} onOpenPanorama={() => { if (selected) openMarkerPanorama(selected) }}
             onDeletePanorama={handleMarkerPanoramaDelete}
-            onStitchPanorama={() => setStitchOpen(true)}
+            onStitchPanorama={() => setStitchOpen(true)} onUploadPanorama={handleMarkerPanoramaUpload}
             selectedVertex={selectedVertex} onEditVertices={() => changeTool('vertices')}
             onAddVertex={() => {
               if (!selected || !canAddVertex(selected)) return

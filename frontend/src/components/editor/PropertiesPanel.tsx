@@ -16,6 +16,7 @@ interface PropertiesPanelProps {
   onOpenPanorama?: () => void
   onDeletePanorama?: () => void
   onStitchPanorama?: () => void
+  onUploadPanorama?: (file: File) => void
   floors?: { id: string; name: string }[]
   currentFloorId?: string
   onGoToFloor?: (floorId: string) => void
@@ -27,7 +28,7 @@ export default function PropertiesPanel({
   onUpdate,
   onDelete,
   selectedVertex, onAddVertex, onDeleteVertex, onEditVertices,
-  panoramaError, onOpenPanorama, onDeletePanorama, onStitchPanorama,
+  panoramaError, onOpenPanorama, onUploadPanorama, onDeletePanorama, onStitchPanorama,
   floors = [], currentFloorId, onGoToFloor,
 }: PropertiesPanelProps) {
   if (selectionCount > 1) {
@@ -169,6 +170,15 @@ export default function PropertiesPanel({
             <button type="button" onClick={onStitchPanorama} className="rounded-lg border border-brand-border px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft">
               {selected.panoramaKey ? 'Пересобрать из фото' : 'Создать панораму'}
             </button>
+            <label className="cursor-pointer rounded-lg border border-line px-3 py-2 text-center text-sm hover:bg-surface-muted focus-within:ring-2 focus-within:ring-brand">
+              {selected.panoramaKey ? 'Заменить панораму 360°' : 'Загрузить панораму 360°'}
+              <input type="file" accept="image/*" aria-label={selected.panoramaKey ? 'Заменить панораму 360°' : 'Загрузить панораму 360°'} className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file) onUploadPanorama?.(file)
+                }} />
+            </label>
             {selected.panoramaKey && <button type="button" onClick={onDeletePanorama} className="rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-hover hover:bg-brand-soft">Удалить панораму</button>}
             {panoramaError && <p role="alert" className="text-xs text-brand-hover">{panoramaError}</p>}
           </div>}

@@ -133,7 +133,7 @@ test('unavailable image storage leaves the saved drawing and project navigation 
   })
   await page.reload()
   await expect(page.getByRole('img', { name: 'Чертёж проекта «Чертёж»' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Открыть проект', exact: true })).toHaveCount(5)
+  await expect(page.getByRole('link', { name: 'Открыть карту', exact: true })).toHaveCount(5)
 })
 
 test('leaving the project list releases the thumbnail URLs', async ({ page }) => {
@@ -146,7 +146,7 @@ test('leaving the project list releases the thumbnail URLs', async ({ page }) =>
     const revoke = URL.revokeObjectURL.bind(URL)
     URL.revokeObjectURL = (url) => { revoked.push(url); revoke(url) }
   })
-  await page.getByRole('link', { name: 'Открыть проект', exact: true }).first().click()
+  await page.getByRole('link', { name: 'Открыть карту', exact: true }).first().click()
   await expect(page).toHaveURL('/projects/photo')
   expect(await page.evaluate((url) => Reflect.get(window, 'previewRevokedUrls').includes(url), source)).toBe(true)
 })

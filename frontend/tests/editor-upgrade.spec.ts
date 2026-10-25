@@ -183,7 +183,7 @@ test('information, status and navigation markers persist and work on the map; de
 
 test('projects and Workspace share the card list with type filters; the form creates only maps', async ({ page }, testInfo) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Создать проект', exact: true }).click()
+  await page.getByRole('button', { name: 'Создать карту', exact: true }).click()
   await expect(page.getByLabel('Тип проекта', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Создать Workspace', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Отмена', exact: true }).click()

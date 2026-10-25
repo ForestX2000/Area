@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { createWorkspace, getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
 import { getFloors } from '../utils/floorStorage';
 import ProjectCard from "../components/ProjectCard";
+import ShareDialog from "../components/ShareDialog";
 import { useConfirmation } from '../contexts/useConfirmation';
 import { countBy, filterEvents, useAnalyticsEvents } from '../utils/analytics';
 import type { Project } from "../types/project";
@@ -24,6 +25,7 @@ function ProjectsPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchParams, setSearchParams] = useSearchParams();
   const [formKind, setFormKind] = useState<FormKind | null>(null);
+  const [sharedProject, setSharedProject] = useState<Project | null>(null);
   // Пункт меню «Создать проект» ведёт на /?create=project — форма открывается так же, как по кнопке в шапке.
   const formOpen = formKind !== null || searchParams.has("create");
   const activeFormKind: FormKind = formKind ?? 'project';
@@ -142,13 +144,17 @@ function ProjectsPage() {
 
   const projectWord =
     projects.length === 1
-      ? "проект"
+      ? "карта"
       : projects.length >= 2 && projects.length <= 4
-        ? "проекта"
-        : "проектов";
+        ? "карты"
+        : "карт";
 
   const showMaps = filter !== 'workspace';
   const showWorkspaces = filter !== 'map';
+  // Отдельные карты: те, что не входят ни в один Workspace.
+  const standaloneProjects = projects.filter((project) =>
+    !workspaces.workspaces.some((workspace) => workspace.nodes.some((node) => node.projectId === project.id)));
+  const mapsToShow = filter === 'map' ? standaloneProjects : filter === 'all' ? projects : [];
 
   return (
     <div className="min-h-screen bg-page text-body">
@@ -200,7 +206,7 @@ function ProjectsPage() {
           <section className="mb-9 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-5 sm:px-7">
               <h3 className="text-lg font-bold text-body">
-                {activeFormKind === 'workspace' ? 'Создание Workspace' : 'Создание проекта'}
+                {activeFormKind === 'workspace' ? 'Создание Workspace' : 'Создание карты'}
               </h3>
             </div>
 
@@ -208,7 +214,7 @@ function ProjectsPage() {
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-body">
-                    {activeFormKind === 'workspace' ? 'Название Workspace' : 'Название проекта'}
+                    {activeFormKind === 'workspace' ? 'Название Workspace' : 'Название карты'}
                   </span>
                   <input
                     id="project-name"
@@ -255,7 +261,7 @@ function ProjectsPage() {
                   type="submit"
                   className="rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
                 >
-                  {activeFormKind === 'workspace' ? 'Создать Workspace' : 'Создать проект'}
+                  {activeFormKind === 'workspace' ? 'Создать Workspace' : 'Создать карту'}
                 </button>
               </div>
             </form>
@@ -302,7 +308,7 @@ function ProjectsPage() {
               {showWorkspaces && workspaces.workspaces.map((workspace) => <ProjectCard key={`workspace-${workspace.id}`}
                 id={workspace.id} name={workspace.name} description={workspace.description ?? ''} buildingsCount={0} floorsCount={0}
                 workspace={workspace} projects={projects} onDelete={() => handleDeleteWorkspace(workspace.id)} />)}
-              {showMaps && projects.map((project) => (
+              {showMaps && mapsToShow.map((project) => (
                 <ProjectCard
                   key={project.id}
                   id={project.id}
@@ -313,6 +319,7 @@ function ProjectsPage() {
                   drawings={project.drawings}
                   stats={{ views: viewStats.byProject.get(project.id) ?? 0, share: viewStats.total ? (viewStats.byProject.get(project.id) ?? 0) / viewStats.total : 0 }}
                   onDelete={() => handleDelete(project.id)}
+          onShare={() => setSharedProject(project)}
                 />
               ))}
             </div>
@@ -321,6 +328,7 @@ function ProjectsPage() {
           </section>
         )}
       </div>
+      {sharedProject && <ShareDialog project={sharedProject} onClose={() => setSharedProject(null)} />}
     </div>
   );
 }

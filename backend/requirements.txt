@@ -1,11 +1,13 @@
+# Список зависимостей, необходимых для работы бекенда
 fastapi
 uvicorn[standard]
 pytest
 httpx
-python-dotenv
 sqlalchemy
 psycopg[binary]
 alembic
+python-dotenv
 python-multipart
+# Склейка панорамы 360° из нескольких фотографий
 numpy
 opencv-python-headless

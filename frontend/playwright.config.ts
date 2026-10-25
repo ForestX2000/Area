@@ -7,6 +7,8 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:5173',
     viewport: { width: 1440, height: 1000 },
     channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
+    // Обучение редактора по умолчанию считается пройденным; его тест включает автозапуск сам.
+    storageState: 'tests/storage-state.json',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

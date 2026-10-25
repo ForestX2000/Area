@@ -2,7 +2,11 @@
 @import "tailwindcss";
 @import "./App.css" layer(components);
 
+/* Тёмная тема включается атрибутом data-theme на <html> (см. utils/theme.ts). */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 :root {
+  color-scheme: light;
   font-family: Inter, system-ui, Arial, sans-serif;
   color: var(--ttk-graphite);
   background: var(--ttk-background);
@@ -34,6 +38,34 @@
   --ttk-drawing-fill: rgba(221, 37, 56, 0.04);
   --ttk-grid-minor: #E8E8E8;
   --ttk-grid-major: #D4D4D4;
+}
+
+/* Та же палитра ТТК на графитовой основе: красный чуть светлее, чтобы читаться на тёмном. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ttk-red: #E8364A;
+  --ttk-red-hover: #F25466;
+  --ttk-red-light: #3A1C21;
+  --ttk-red-tint: #4B2129;
+  --ttk-red-border: #7C2E39;
+  --ttk-red-strong: #FF97A3;
+
+  --ttk-graphite: #F3F3F3;
+  --ttk-body: #D6D6D6;
+  --ttk-white: #1B1C1C;
+
+  --ttk-background: #121313;
+  --ttk-surface-muted: #202121;
+  --ttk-surface-subtle: #282A2A;
+  --ttk-border: #343636;
+  --ttk-border-soft: #2A2C2C;
+  --ttk-border-strong: #474A4A;
+  --ttk-muted: #9C9C9C;
+  --ttk-success: #4CC38A;
+  --ttk-drawing-fill: rgba(232, 54, 74, 0.10);
+  --ttk-grid-minor: #262828;
+  --ttk-grid-major: #353838;
 }
 
 @theme inline {
@@ -88,3 +120,25 @@ input[type='range'] {
 }
 
 
+
+/* Маршрут на плане: пунктир «бежит» от начала к концу. */
+@keyframes route-flow { to { stroke-dashoffset: -32; } }
+.route-flow { animation: route-flow 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .route-flow { animation: none; } }
+
+/* Метки внутри панорамы Pannellum. */
+.area-hotspot { width: 28px; height: 28px; cursor: pointer; }
+.area-hotspot-icon {
+  display: flex; width: 28px; height: 28px; align-items: center; justify-content: center;
+  border: 2px solid #fff; border-radius: 9999px; background: #DD2538; color: #fff;
+  font: 700 14px/1 system-ui, sans-serif; box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+.area-hotspot-scene .area-hotspot-icon { background: #2563eb; }
+.area-hotspot-label {
+  position: absolute; top: 50%; left: 34px; max-width: 200px; transform: translateY(-50%);
+  overflow: hidden; border-radius: 6px; background: rgb(26 27 27 / 0.85); padding: 2px 8px;
+  color: #fff; font: 12px/1.5 system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap;
+}
+.area-hotspot.is-editing .area-hotspot-icon { outline: 3px solid #fff; outline-offset: 2px; }
+.area-hotspot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 9999px; }
+.area-placing .pnlm-ui, .area-placing .pnlm-dragfix { cursor: crosshair !important; }

@@ -1,17 +1,20 @@
-
 FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Зависимости
+# Зависимости (отдельным слоем, чтобы кешировались)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-# Код приложения
+# Код приложения; файлы планов и панорам живут в volume /app/data
 COPY . .
+RUN mkdir -p /app/data
 
-# Порт приложения
 EXPOSE 8000
 
-# Запуск uvicorn из папки backend (точка входа main:app)
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

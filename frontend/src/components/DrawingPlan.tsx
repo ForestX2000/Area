@@ -1,12 +1,14 @@
+import type { ReactNode } from 'react'
 import type { DrawingObject } from '../types/drawing'
 import { objectBounds, objectsBounds, PIXELS_PER_METRE } from './editor/drawingGeometry'
 import DrawingShape from './editor/DrawingShape'
 
-export default function DrawingPlan({ objects, label, className = 'block h-auto w-full', onMarkerActivate }: {
+export default function DrawingPlan({ objects, label, className = 'block h-auto w-full', onMarkerActivate, children }: {
   objects: DrawingObject[]
   label: string
   className?: string
   onMarkerActivate?: (object: DrawingObject) => void
+  children?: ReactNode
 }) {
   const visibleObjects = objects.filter((object) => object.markerKind !== 'service')
   const bounds = objectsBounds(visibleObjects)
@@ -38,6 +40,7 @@ export default function DrawingPlan({ objects, label, className = 'block h-auto 
           </g>
         )
       })}
+      {children}
     </svg>
   )
 }

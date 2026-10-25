@@ -4,6 +4,7 @@ import type { ChangeEvent, MouseEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import PanoramaViewer from "../components/PanoramaViewer";
+import PanoramaStitchDialog from "../components/PanoramaStitchDialog";
 import DrawingPlan from "../components/DrawingPlan";
 import EditorNavigation from "../components/editor/EditorNavigation";
 import { useConfirmation } from '../contexts/useConfirmation';
@@ -19,12 +20,11 @@ import type {
 
 import {
   deleteMapImage,
-  getMapImage,
-  getPanorama,
   saveMapImage,
   savePanorama,
   deletePanorama,
 } from "../utils/mapStorage";
+import { api } from "../utils/api";
 
 import { getPoints, savePoints } from "../utils/pointStorage";
 
@@ -39,6 +39,15 @@ const POINT_CATEGORIES: {
   { value: "stand", label: "Стенд", icon: "▤" },
   { value: "wifi", label: "Wi-Fi", icon: "⌁" },
   { value: "other", label: "Другое", icon: "●" },
+];
+
+const STEPS = ["Поставь точку", "Выбери точку", "Добавь панораму"];
+
+const STEP_HINTS = [
+  "Нажми на любое место плана — там появится точка",
+  "Выбери точку на плане или в списке объектов",
+  "Загрузи панораму 360° для выбранной точки в панели настроек",
+  "Готово! Добавляй новые точки или открой панораму",
 ];
 
 function getCategoryLabel(category?: MapPointCategory) {
@@ -88,14 +97,28 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
   const [panoramaUrl, replacePanorama] = useObjectUrl();
   const [panoramaName, setPanoramaName] = useState("");
   const [panoramaLoading, setPanoramaLoading] = useState(false);
+  const [stitchOpen, setStitchOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeDrawingMarker, setActiveDrawingMarker] = useState<DrawingObject | null>(null);
   const [panoramaIds, setPanoramaIds] = useState<string[]>([]);
   const requestedPanorama = useRef<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const pendingFocusPointId = useRef<string | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const hasPlan = !!imageUrl || drawings.length > 0;
 
   const selectedPoint =
     points.find((point) => point.id === selectedPointId) ?? null;
+  const selectedHasPanorama = !!selectedPoint && panoramaIds.includes(selectedPoint.id);
+  const activeStep = points.length === 0 ? 0 : !selectedPoint ? 1 : !selectedHasPanorama ? 2 : 3;
+
+  // Новая точка сразу готова к переименованию: фокус в поле названия.
+  useEffect(() => {
+    if (!selectedPointId || pendingFocusPointId.current !== selectedPointId) return;
+    pendingFocusPointId.current = null;
+    titleInputRef.current?.focus();
+    titleInputRef.current?.select();
+  }, [selectedPointId]);
 
   const filteredPoints = points.filter((point) => {
     const query = search.trim().toLocaleLowerCase();
@@ -129,7 +152,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
       try {
         const [savedImage, savedPoints] = await Promise.all([
-          getMapImage(storageId),
+          api.fetchMapImage(storageId),
           Promise.resolve(getPoints(storageId)),
         ]);
 
@@ -139,11 +162,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
         if (savedImage) {
           replaceImage(savedImage);
-          setImageName(
-            savedImage instanceof File && savedImage.name
-              ? savedImage.name
-              : "План помещения",
-          );
+          setImageName(savedImage instanceof File && savedImage.name ? savedImage.name : "План помещения");
         } else {
           replaceImage();
           setImageName("");
@@ -151,7 +170,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
         // Check actual files; older points may not have panoramaKey metadata.
         const available = await Promise.all(savedPoints.map(async (point) =>
-          (await getPanorama(storageId, point.id)) ? point.id : null));
+          (await api.fetchPanorama(storageId, point.id)) ? point.id : null));
         if (cancelled) return;
         const ids = available.filter((id): id is string => id !== null);
         setPanoramaIds(ids);
@@ -199,15 +218,13 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
       setViewerOpen(false);
 
       try {
-        const file = await getPanorama(storageId, selectedPointId);
+        const file = await api.fetchPanorama(storageId, selectedPointId);
 
         if (cancelled) return;
 
         if (file) {
           replacePanorama(file);
-          setPanoramaName(
-            file instanceof File && file.name ? file.name : "Панорама",
-          );
+          setPanoramaName(file instanceof File && file.name ? file.name : "Панорама");
           if (requestedPanorama.current === selectedPointId) {
             requestedPanorama.current = null;
             setViewerOpen(true);
@@ -336,8 +353,22 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
     persistPoints([...points, newPoint]);
     setSelectedPointId(newPoint.id);
+    pendingFocusPointId.current = newPoint.id;
     setSearch("");
     setViewerOpen(false);
+  }
+
+  function handleMapHover(event: MouseEvent<HTMLDivElement>) {
+    const overControl = event.target instanceof Element && event.target.closest('button, [role="button"]');
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (overControl || saving || !bounds.width || !bounds.height) {
+      setHoverPosition(null);
+      return;
+    }
+    setHoverPosition({
+      x: ((event.clientX - bounds.left) / bounds.width) * 100,
+      y: ((event.clientY - bounds.top) / bounds.height) * 100,
+    });
   }
 
   function updateSelectedPoint(changes: Partial<MapPoint>) {
@@ -399,7 +430,12 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
     const file = event.target.files?.[0];
     event.target.value = "";
 
-    if (!file || !projectId || !selectedPointId) return;
+    if (file) await savePointPanorama(file);
+  }
+
+  // Сохраняем загруженную или склеенную из фотографий панораму точки.
+  async function savePointPanorama(file: File) {
+    if (!projectId || !selectedPointId) return;
 
     if (!file.type.startsWith("image/")) {
       setError("Выбери файл изображения для панорамы.");
@@ -512,9 +548,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link to={floorUrl(`/projects/${projectId}/editor`, floorId, explicitFloor)}
-            className="rounded-lg border border-line bg-white px-4 py-2 text-body hover:bg-surface-muted">Редактировать чертёж</Link>
-          {panoramaIds.length === 0 && <span className="text-xs text-muted">Добавьте точку на карте и загрузите для неё панораму 360°.</span>}
-        </div>
+            className="rounded-lg border border-line bg-surface px-4 py-2 text-body hover:bg-surface-muted">Редактировать чертёж</Link>        </div>
       </header>
 
       {error && (
@@ -536,7 +570,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
       )}
 
       {saving && (
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-brand-border bg-white px-4 py-3 text-sm text-brand">
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-brand-border bg-surface px-4 py-3 text-sm text-brand">
           <span className="h-2 w-2 animate-pulse rounded-full bg-brand" />
           Сохраняем изменения...
         </div>
@@ -544,7 +578,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
       <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         {/* Рабочая область карты */}
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white shadow-sm xl:order-2">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm xl:order-2">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-xl text-brand">
@@ -571,14 +605,36 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
           </div>
 
           {hasPlan && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft bg-page px-5 py-3 sm:px-6">
-              <p className="text-sm text-muted">
-                <span className="mr-2 inline-block h-2 w-2 rounded-full bg-brand" />
-                Нажми на свободное место плана, чтобы добавить точку
+            <div className="space-y-3 border-b border-line-soft bg-page px-5 py-3 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <ol aria-label="Как добавить точку" className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                  {STEPS.map((step, index) => {
+                    const done = index < activeStep;
+                    const current = index === activeStep;
+                    return (
+                      <li key={step} aria-current={current ? "step" : undefined} className="flex items-center gap-2">
+                        {index > 0 && <span aria-hidden="true" className={`h-px w-4 ${done || current ? "bg-brand" : "bg-line-strong"}`} />}
+                        <span className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition ${
+                          current ? "border-brand bg-brand text-white shadow-sm" : done ? "border-brand-border bg-brand-soft text-brand" : "border-line bg-surface text-muted"
+                        }`}>
+                          <span aria-hidden="true">{done ? "✓" : index + 1}</span>
+                          {step}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <span className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium">
+                  Объектов: {points.length}
+                </span>
+              </div>
+              <p role="status" className="flex items-center text-sm text-body">
+                <span className="relative mr-2 flex h-2.5 w-2.5">
+                  {activeStep < 3 && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />}
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
+                </span>
+                {STEP_HINTS[activeStep]}
               </p>
-              <span className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium">
-                Объектов: {points.length}
-              </span>
             </div>
           )}
 
@@ -586,8 +642,10 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
             {hasPlan ? (
               <div className="overflow-hidden rounded-xl border border-line bg-page p-2 sm:p-4">
                 <div
-                  className="relative mx-auto w-full cursor-crosshair overflow-hidden rounded-lg bg-white shadow-sm"
+                  className="relative mx-auto w-full cursor-crosshair overflow-hidden rounded-lg bg-surface shadow-sm"
                   onClick={handleMapClick}
+                  onMouseMove={handleMapHover}
+                  onMouseLeave={() => setHoverPosition(null)}
                 >
                   {imageUrl ? (
                     <img src={imageUrl} alt="План помещения" className="block h-auto w-full select-none" draggable={false} />
@@ -626,6 +684,28 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                       </button>
                     );
                   })}
+
+                  {points.length === 0 && !hoverPosition && (
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center bg-surface/40">
+                      <div className="flex items-center gap-3 rounded-2xl border border-brand-border bg-surface px-5 py-4 text-sm font-semibold text-ink shadow-lg">
+                        <span className="relative flex h-9 w-9 items-center justify-center">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
+                          <span className="relative flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-brand text-lg text-white shadow">+</span>
+                        </span>
+                        Нажми в любое место плана,<br />чтобы поставить первую точку
+                      </div>
+                    </div>
+                  )}
+
+                  {hoverPosition && (
+                    <div aria-hidden="true" className="pointer-events-none absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                      style={{ left: `${hoverPosition.x}%`, top: `${hoverPosition.y}%` }}>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-white bg-brand/70 text-sm font-bold text-white shadow-md sm:h-9 sm:w-9">+</span>
+                      <span className="absolute top-full mt-1 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs font-medium text-surface shadow">
+                        Нажми, чтобы добавить точку {points.length + 1}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -670,13 +750,13 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
         {/* Список объектов и редактор */}
         <aside className="flex min-w-0 flex-col gap-5 xl:order-1">
-          {activeDrawingMarker && <section className="order-first rounded-2xl border border-brand-border bg-white p-5">
+          {activeDrawingMarker && <section className="order-first rounded-2xl border border-brand-border bg-surface p-5">
             <h2 className="font-semibold text-ink">{activeDrawingMarker.label || 'Метка'}</h2>
             <p className="mt-2 whitespace-pre-line text-sm text-muted">{activeDrawingMarker.description || 'Описание не добавлено.'}</p>
             {activeDrawingMarker.markerKind === 'status' && <p className="mt-2 text-sm">Статус: {activeDrawingMarker.status === 'blocked' ? 'Недоступно' : activeDrawingMarker.status === 'progress' ? 'В работе' : 'Готово'}</p>}
             <button type="button" onClick={() => setActiveDrawingMarker(null)} className="mt-3 text-sm text-brand">Закрыть метку</button>
           </section>}
-          <section className="order-2 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+          <section className="order-2 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
             <div className="border-b border-line-soft px-5 py-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -783,7 +863,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
           </section>
 
           {selectedPoint ? (
-            <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+            <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
               <div className="border-b border-line-soft px-5 py-5">
                 <p className="text-xs font-bold uppercase tracking-[0.15em] text-brand">
                   Настройки объекта
@@ -800,11 +880,12 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                 <label className="block space-y-2">
                   <span className="text-sm font-medium">Название</span>
                   <input
+                    ref={titleInputRef}
                     type="text"
                     value={selectedPoint.title}
                     onChange={handleTitleChange}
                     maxLength={120}
-                    className="w-full rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition placeholder:text-muted focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand-soft"
+                    className="w-full rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition placeholder:text-muted focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand-soft"
                     placeholder="Например, Главный вход"
                   />
                 </label>
@@ -814,7 +895,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                   <select
                     value={selectedPoint.category ?? "other"}
                     onChange={handleCategoryChange}
-                    className="w-full rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand-soft"
+                    className="w-full rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand-soft"
                   >
                     {POINT_CATEGORIES.map((category) => (
                       <option key={category.value} value={category.value}>
@@ -832,7 +913,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                     rows={3}
                     maxLength={1000}
                     placeholder="Расскажи, что находится в этом месте..."
-                    className="w-full resize-y rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition placeholder:text-muted focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand-soft"
+                    className="w-full resize-y rounded-xl border border-line bg-page px-3.5 py-3 text-sm outline-none transition placeholder:text-muted focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand-soft"
                   />
                   <span className="block text-right text-xs text-muted">
                     {(selectedPoint.description ?? "").length}/1000
@@ -897,7 +978,11 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                     </div>
                   )}
 
-                  <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-brand-border px-4 py-3 text-sm font-semibold text-brand transition hover:bg-brand-soft">
+                  <label className={`mt-3 flex cursor-pointer items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition focus-within:ring-4 focus-within:ring-brand-soft ${
+                    panoramaUrl || panoramaLoading
+                      ? "border border-brand-border text-brand hover:bg-brand-soft"
+                      : "bg-brand text-white shadow-sm ring-4 ring-brand-soft hover:bg-brand-hover"
+                  }`}>
                     {panoramaUrl
                       ? "Заменить изображение"
                       : "+ Загрузить панораму"}
@@ -909,6 +994,14 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                       disabled={saving || panoramaLoading}
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setStitchOpen(true)}
+                    disabled={saving || panoramaLoading}
+                    className="mt-2 w-full rounded-xl border border-line px-4 py-3 text-sm font-medium transition hover:border-brand-border hover:bg-brand-soft hover:text-brand disabled:opacity-50"
+                  >
+                    {panoramaUrl ? "Пересобрать из фото" : "Собрать из нескольких фото"}
+                  </button>
                 </div>
 
                 <div className="border-t border-line-soft pt-4">
@@ -924,19 +1017,31 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
               </div>
             </section>
           ) : (
-            <section className="rounded-2xl border border-dashed border-line-strong bg-white p-6 text-center">
+            <section className="rounded-2xl border border-dashed border-line-strong bg-surface p-6 text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-page text-xl text-muted">
                 ⚙
               </div>
               <h2 className="text-sm font-semibold">Настройки объекта</h2>
               <p className="mt-2 text-xs leading-5 text-muted">
-                Выбери точку в списке или нажми на маркер плана, чтобы изменить
-                её данные.
+                {points.length === 0
+                  ? "Сначала поставь точку на плане — здесь появятся её название, тип и панорама."
+                  : "Выбери точку в списке или нажми на маркер плана, чтобы изменить её данные."}
               </p>
             </section>
           )}
         </aside>
       </div>
+
+      {stitchOpen && selectedPoint && (
+        <PanoramaStitchDialog
+          title={selectedPoint.title}
+          onClose={() => setStitchOpen(false)}
+          onComplete={async (file) => {
+            await savePointPanorama(file);
+            setStitchOpen(false);
+          }}
+        />
+      )}
 
       {viewerOpen && panoramaUrl && selectedPoint && (
         <PanoramaViewer
@@ -948,6 +1053,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
           panoramas={points.filter((point) => panoramaIds.includes(point.id))}
           onSelectPanorama={openPanorama}
           onClose={() => setViewerOpen(false)}
+          editable
         />
       )}
     </div>

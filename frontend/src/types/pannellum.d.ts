@@ -1,5 +1,17 @@
 declare module 'pannellum'
 
+interface PannellumHotSpot {
+  id: string
+  pitch: number
+  yaw: number
+  type: 'info' | 'scene'
+  cssClass?: string
+  createTooltipFunc?: (div: HTMLDivElement, args: unknown) => void
+  createTooltipArgs?: unknown
+  clickHandlerFunc?: (event: MouseEvent, args: unknown) => void
+  clickHandlerArgs?: unknown
+}
+
 interface PannellumViewer {
   on(event: string, listener: (...args: unknown[]) => void): PannellumViewer
   off(event: string, listener: (...args: unknown[]) => void): PannellumViewer
@@ -9,6 +21,9 @@ interface PannellumViewer {
   stopMovement(): void
   resize(): PannellumViewer
   destroy(): void
+  addHotSpot(hotSpot: PannellumHotSpot): PannellumViewer
+  removeHotSpot(id: string): boolean
+  mouseEventToCoords(event: MouseEvent): [number, number]
 }
 
 interface Window {

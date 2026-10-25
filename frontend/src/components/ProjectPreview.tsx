@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { DrawingObject } from '../types/drawing'
-import { getMapImage, getPanorama } from '../utils/mapStorage'
 import { getPoints } from '../utils/pointStorage'
 import DrawingShape from './editor/DrawingShape'
 import { objectsBounds } from './editor/drawingGeometry'
 import { floorStorageId, getFloor } from '../utils/floorStorage'
 import { useProjects } from '../utils/useProjects'
+import { api } from '../utils/api'
 
 interface ProjectPreviewProps {
   projectId: string
@@ -89,13 +89,13 @@ function FloorPreview({ storageId, name, drawings = [], mode = 'content' }: Proj
       try {
         for (const point of mode === 'map' ? [] : getPoints(storageId)) {
           if (cancelled) return
-          if (await displayImage(await getPanorama(storageId, point.id), 'panorama')) return
+          if (await displayImage(await api.fetchPanorama(storageId, point.id), 'panorama')) return
         }
       } catch {
         // Continue with the plan or drawing if a panorama cannot be loaded.
       }
       try {
-        if (!cancelled) await displayImage(await getMapImage(storageId), 'plan')
+        if (!cancelled) await displayImage(await api.fetchMapImage(storageId), 'plan')
       } catch {
         // The saved drawing remains available when IndexedDB is unavailable.
       }
@@ -130,7 +130,7 @@ function FloorPreview({ storageId, name, drawings = [], mode = 'content' }: Proj
           <span className="text-xs">Добавьте план, панораму или чертёж</span>
         </div>
       )}
-      <span className="absolute left-3 top-3 rounded-full border border-line bg-white/95 px-3 py-1 text-xs font-medium text-body">
+      <span className="absolute left-3 top-3 rounded-full border border-line bg-surface/95 px-3 py-1 text-xs font-medium text-body">
         {label}
       </span>
     </div>

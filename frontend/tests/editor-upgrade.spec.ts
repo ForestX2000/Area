@@ -181,12 +181,16 @@ test('information, status and navigation markers persist and work on the map; de
   await expect(page).toHaveURL('/projects/target/map')
 })
 
-test('projects and Workspace share the card list and creation form with type filters', async ({ page }, testInfo) => {
+test('projects and Workspace share the card list with type filters; the form creates only maps', async ({ page }, testInfo) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Создать проект', exact: true }).click()
-  await page.getByLabel('Тип проекта', { exact: true }).selectOption('workspace')
-  await page.getByLabel('Название проекта', { exact: true }).fill('План кампуса')
-  await page.getByRole('button', { name: 'Создать Workspace', exact: true }).click()
+  await expect(page.getByLabel('Тип проекта', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Создать Workspace', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await page.evaluate(() => localStorage.setItem('space-map-workspaces', JSON.stringify({
+    version: 1, activeId: 'campus', workspaces: [{ id: 'campus', name: 'План кампуса', description: '', nodes: [], groups: [], view: { x: 0, y: 0, zoom: 1 } }],
+  })))
+  await page.reload()
   await expect(page.getByRole('article')).toHaveCount(3)
   await page.getByRole('navigation', { name: 'Фильтр проектов' }).getByRole('button', { name: 'Workspace', exact: true }).click()
   await expect(page.getByRole('article')).toHaveCount(1)
@@ -367,6 +371,8 @@ test('right click cancels the polygon draft without saving, opens no context men
   expect(await drawings(page)).toEqual(before)
   for (const point of [{ x: 100, y: 300 }, { x: 200, y: 300 }, { x: 200, y: 400 }, { x: 100, y: 300 }]) await polygonPoint(page, point)
   expect((await drawings(page))[1].points).toEqual([{ x: 100, y: 300 }, { x: 200, y: 300 }, { x: 200, y: 400 }])
+  // Без черновика правая кнопка открывает меню действий редактора вместо меню браузера.
   const prevented = await canvas(page).evaluate((node) => !node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })))
-  expect(prevented).toBe(false)
+  expect(prevented).toBe(true)
+  await expect(page.getByRole('menu', { name: 'Действия на холсте' })).toBeVisible()
 })

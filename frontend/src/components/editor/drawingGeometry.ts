@@ -5,14 +5,17 @@ export const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 4
 
 export const SHAPE_TOOLS: { id: DrawingTool; label: string; icon: string }[] = [
-  { id: 'select', label: 'Выделение', icon: '⌘' }, { id: 'vertices', label: 'Вершины', icon: '◇' },
+  { id: 'select', label: 'Выделение', icon: '⌘' }, { id: 'dimension', label: 'Линейка', icon: '↔' },
+  { id: 'vertices', label: 'Вершины', icon: '◇' }, { id: 'stairs', label: 'Лестница', icon: '≡' },
   { id: 'line', label: 'Линия', icon: '─' }, { id: 'polyline', label: 'Ломаная', icon: '⌁' },
   { id: 'rectangle', label: 'Прямоугольник', icon: '▭' }, { id: 'ellipse', label: 'Эллипс', icon: '◯' },
   { id: 'triangle', label: 'Треугольник', icon: '△' }, { id: 'diamond', label: 'Ромб', icon: '♢' },
   { id: 'pentagon', label: 'Пятиугольник', icon: '⬠' }, { id: 'hexagon', label: 'Шестиугольник', icon: '⬡' },
   { id: 'star', label: 'Звезда', icon: '☆' }, { id: 'arrow', label: 'Стрелка', icon: '➜' },
-  { id: 'polygon', label: 'Многоугольник', icon: '⬟' }, { id: 'dimension', label: 'Линейка', icon: '↔' },
+  { id: 'polygon', label: 'Многоугольник', icon: '⬟' },
 ]
+
+export const isStairs = (object: DrawingObject) => object.shapeKind === 'stairs'
 
 export const MARKER_LABELS: Record<MarkerKind, string> = { info: 'Информационная', navigation: 'Навигационная', status: 'Статусная', service: 'Служебная' }
 export function objectName(object: DrawingObject) {
@@ -96,6 +99,8 @@ export function rotateDrawing(object: DrawingObject, center: Point, degrees: num
 export function createDrawing(tool: DrawingTool, start: Point, end: Point, id: string): DrawingObject {
   const base = { id, stroke: tool === 'dimension' ? 'var(--ttk-body)' : 'var(--ttk-graphite)', strokeWidth: 2 }
   if (tool.startsWith('marker-')) return { ...base, type: 'marker', markerKind: tool.slice(7) as MarkerKind, points: [start, start], status: 'ready' }
+  if (tool === 'stairs') return { ...base, type: 'rectangle', shapeKind: 'stairs', points: [start, end],
+    width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y), fill: 'var(--ttk-drawing-fill)' }
   if (['line', 'dimension', 'ellipse', 'rectangle'].includes(tool)) return {
     ...base, type: tool as DrawingObject['type'], points: [start, end],
     ...(['rectangle', 'ellipse'].includes(tool) ? { width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y), fill: 'var(--ttk-drawing-fill)' } : {}),
@@ -121,7 +126,7 @@ export function createDrawing(tool: DrawingTool, start: Point, end: Point, id: s
 }
 
 export function vertices(object: DrawingObject): Point[] {
-  if (object.type === 'ellipse' || object.type === 'marker') return []
+  if (object.type === 'ellipse' || object.type === 'marker' || isStairs(object)) return []
   if (object.type === 'rectangle') return resizeHandles(object)
   return drawingPoints(object)
 }
@@ -165,7 +170,7 @@ export function moveVertex(object: DrawingObject, index: number, point: Point): 
     points: vertices(object).map((original, current) => current === index ? point : original) }
 }
 
-export function canAddVertex(object: DrawingObject) { return ['rectangle', 'polygon', 'line', 'polyline'].includes(object.type) }
+export function canAddVertex(object: DrawingObject) { return !isStairs(object) && ['rectangle', 'polygon', 'line', 'polyline'].includes(object.type) }
 export function canDeleteVertex(object: DrawingObject) { return vertices(object).length > (['rectangle', 'polygon'].includes(object.type) ? 3 : 2) }
 
 export function addVertex(object: DrawingObject, point?: Point): { object: DrawingObject; index: number } {

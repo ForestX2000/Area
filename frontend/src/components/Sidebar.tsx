@@ -1,7 +1,7 @@
 
 function Sidebar() {
   return (
-    <aside className="flex min-h-screen w-64 flex-col border-r border-line bg-surface text-body">
+    <aside className="flex min-h-screen w-64 flex-col border-r border-line bg-white text-body">
       <div className="flex items-center gap-3 border-b border-line px-5 py-5">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-sm font-bold text-white">
           ТТК

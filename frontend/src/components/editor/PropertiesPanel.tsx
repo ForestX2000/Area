@@ -12,11 +12,6 @@ interface PropertiesPanelProps {
   onAddVertex?: () => void
   onDeleteVertex?: () => void
   onEditVertices?: () => void
-  panoramaError?: string
-  onOpenPanorama?: () => void
-  onUploadPanorama?: (file: File) => void
-  onDeletePanorama?: () => void
-  onStitchPanorama?: () => void
 }
 
 export default function PropertiesPanel({
@@ -25,11 +20,10 @@ export default function PropertiesPanel({
   onUpdate,
   onDelete,
   selectedVertex, onAddVertex, onDeleteVertex, onEditVertices,
-  panoramaError, onOpenPanorama, onUploadPanorama, onDeletePanorama, onStitchPanorama,
 }: PropertiesPanelProps) {
   if (selectionCount > 1) {
     return (
-      <div className="flex flex-col gap-4 border-l border-line bg-surface p-4 shadow-sm">
+      <div className="flex flex-col gap-4 border-l border-line bg-white p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-ink" role="status">Выделено объектов: {selectionCount}</h3>
         <p className="text-sm text-muted">Перетащите любую выделенную фигуру, чтобы переместить группу. Маркер над рамкой поворачивает её вокруг общего центра.</p>
         <button type="button" onClick={onDelete} title="Удалить выбранные · Delete" aria-keyshortcuts="Delete"
@@ -41,7 +35,7 @@ export default function PropertiesPanel({
   }
   if (!selected) {
     return (
-      <div className="p-4 bg-surface border-l border-line shadow-sm">
+      <div className="p-4 bg-white border-l border-line shadow-sm">
         <div className="flex flex-col gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface-subtle text-muted">
             ⌘
@@ -59,7 +53,7 @@ export default function PropertiesPanel({
   const height = box.height / PIXELS_PER_METRE
 
   return (
-    <div className="p-4 bg-surface border-l border-line shadow-sm flex flex-col gap-4">
+    <div className="p-4 bg-white border-l border-line shadow-sm flex flex-col gap-4">
       <div>
         <h3 className="text-sm font-semibold text-ink mb-2">
           Объект: {objectName(selected)}
@@ -80,7 +74,7 @@ export default function PropertiesPanel({
             onChange={(e) => {
               onUpdate({ label: e.target.value })
             }}
-            className="w-full rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-surface"
+            className="w-full rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white"
           />
         </div>
 
@@ -94,7 +88,7 @@ export default function PropertiesPanel({
               step="0.1"
               value={width.toString()}
               onChange={(e) => onUpdate({ width: Math.max(0, Number(e.target.value) || 0) * PIXELS_PER_METRE })}
-              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-surface"
+              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white"
             />
             <span className="text-xs text-muted">м</span>
           </div>
@@ -110,7 +104,7 @@ export default function PropertiesPanel({
               step="0.1"
               value={height.toString()}
               onChange={(e) => onUpdate({ height: Math.max(0, Number(e.target.value) || 0) * PIXELS_PER_METRE })}
-              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-surface"
+              className="w-20 rounded-xl border border-line bg-surface-muted px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white"
             />
             <span className="text-xs text-muted">м</span>
           </div>
@@ -141,24 +135,6 @@ export default function PropertiesPanel({
             onChange={(event) => onUpdate({ targetProjectId: event.target.value })} className="w-full rounded-lg border border-line p-2 text-sm">
             <option value="">Выберите карту</option>{getProjects().map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
           </select></label>}
-          {selected.markerKind === 'navigation' && <div className="grid gap-2">
-            <p className="text-xs text-muted">Панорама: {selected.panoramaKey ? 'загружена' : 'не добавлена'}</p>
-            {selected.panoramaKey && <button type="button" onClick={onOpenPanorama} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-surface-muted">Открыть панораму</button>}
-            <label className="cursor-pointer rounded-lg border border-line px-3 py-2 text-center text-sm hover:bg-surface-muted focus-within:ring-2 focus-within:ring-brand">
-              {selected.panoramaKey ? 'Заменить панораму' : 'Создать панораму'}
-              <input type="file" accept="image/*" aria-label={selected.panoramaKey ? 'Заменить панораму' : 'Создать панораму'} className="sr-only"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (file) onUploadPanorama?.(file)
-                }} />
-            </label>
-            <button type="button" onClick={onStitchPanorama} className="rounded-lg border border-brand-border px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft">
-              {selected.panoramaKey ? 'Пересобрать из фото' : 'Собрать из фото'}
-            </button>
-            {selected.panoramaKey && <button type="button" onClick={onDeletePanorama} className="rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-hover hover:bg-brand-soft">Удалить панораму</button>}
-            {panoramaError && <p role="alert" className="text-xs text-brand-hover">{panoramaError}</p>}
-          </div>}
           {selected.markerKind === 'status' && <label className="grid gap-1 text-xs">Статус<select aria-label="Статус метки" value={selected.status ?? 'ready'} onChange={(event) => onUpdate({ status: event.target.value as DrawingObject['status'] })}
             className="rounded-lg border border-line p-2 text-sm"><option value="ready">Готово</option><option value="progress">В работе</option><option value="blocked">Недоступно</option></select></label>}
         </div> : vertices(selected).length > 0 && <div className="mb-4 grid gap-2 border-t border-line pt-3">

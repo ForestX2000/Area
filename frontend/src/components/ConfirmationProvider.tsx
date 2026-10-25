@@ -44,7 +44,7 @@ export default function ConfirmationProvider({ children }: { children: ReactNode
   return <ConfirmationContext.Provider value={confirm}>
     {children}
     {createPortal(<dialog ref={dialogRef} aria-labelledby={titleId} aria-describedby={messageId}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-line bg-surface p-0 text-body shadow-2xl backdrop:bg-black/50"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-line bg-white p-0 text-body shadow-2xl backdrop:bg-ink/45"
       onCancel={(event) => { event.preventDefault(); finish(false) }}
       onKeyDown={(event) => {
         event.stopPropagation()
@@ -66,7 +66,7 @@ export default function ConfirmationProvider({ children }: { children: ReactNode
       </div>
       <div className="flex flex-wrap justify-end gap-3 border-t border-line bg-surface-muted px-6 py-4">
         <button ref={cancelRef} type="button" onClick={() => finish(false)}
-          className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-subtle">Отмена</button>
+          className="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface-subtle">Отмена</button>
         <button ref={deleteRef} type="button" onClick={() => finish(true)}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover">Удалить</button>
       </div>

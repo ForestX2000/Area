@@ -14,8 +14,6 @@ type ProjectCardProps = {
   onDelete?: () => void;
   workspace?: Workspace;
   projects?: Project[];
-  /** Просмотры карты за последние 30 дней и доля от всех просмотров карт. */
-  stats?: { views: number; share: number };
 };
 
 function ProjectCard({
@@ -26,10 +24,10 @@ function ProjectCard({
   floorsCount,
   drawings,
   onDelete,
-  workspace, projects = [], stats,
+  workspace, projects = [],
 }: ProjectCardProps) {
   return (
-    <article data-project-kind={workspace ? 'workspace' : 'map'} className="project-card overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition duration-200 hover:-translate-y-1 hover:border-brand-border hover:shadow-lg">
+    <article data-project-kind={workspace ? 'workspace' : 'map'} className="project-card overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-brand-border hover:shadow-lg">
       {workspace ? <div className="relative grid h-44 grid-cols-2 overflow-hidden bg-page">
         {workspace.nodes.slice(0, 4).map((node) => {
           const project = projects.find((project) => project.id === node.projectId)
@@ -38,7 +36,7 @@ function ProjectCard({
           </div> : null
         })}
         {workspace.nodes.length === 0 && <p className="col-span-2 self-center text-center text-sm text-muted">Добавьте карты в Workspace</p>}
-        <span className="absolute left-3 top-3 rounded-full border border-line bg-surface/95 px-3 py-1 text-xs text-body">Workspace</span>
+        <span className="absolute left-3 top-3 rounded-full border border-line bg-white/95 px-3 py-1 text-xs text-body">Workspace</span>
       </div> : <ProjectPreview key={id} projectId={id} name={name} drawings={drawings} />}
 
       <div className="project-info p-5">
@@ -66,13 +64,6 @@ function ProjectCard({
         >
           {workspace ? 'Открыть Workspace' : 'Открыть проект'} <span aria-hidden="true">→</span>
         </Link>
-        {!workspace && (
-          <Link to={`/stats/${id}`} aria-label={`Посмотреть статистику: ${name}`}
-            className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-[13px] text-body transition hover:border-brand-border hover:bg-brand-soft hover:text-brand">
-            <span>Посмотреть статистику</span>
-            {stats && <span className="text-xs text-muted">{stats.views.toLocaleString('ru-RU')} просм. · {Math.round(stats.share * 100)}%</span>}
-          </Link>
-        )}
         {onDelete && (
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
             <button type="button" onClick={onDelete}

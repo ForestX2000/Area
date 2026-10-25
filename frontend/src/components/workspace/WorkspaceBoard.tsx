@@ -251,10 +251,10 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
   const nodes = drafts ?? workspace.nodes
   const selectedGroups = workspace.groups.filter((group) => group.projectIds.some((id) => selected.includes(id)))
   const singleGroup = selectedGroups.length === 1 && selectedGroups[0].projectIds.length === selected.length ? selectedGroups[0] : undefined
-  const buttonClass = 'rounded-lg border border-line bg-surface px-3 py-2 text-sm enabled:hover:bg-surface-muted disabled:opacity-40'
+  const buttonClass = 'rounded-lg border border-line bg-white px-3 py-2 text-sm enabled:hover:bg-surface-muted disabled:opacity-40'
 
   return (
-    <div onKeyDown={keyboard} className="overflow-hidden rounded-2xl border border-line bg-surface">
+    <div onKeyDown={keyboard} className="overflow-hidden rounded-2xl border border-line bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
         <button type="button" onClick={combine} disabled={selected.length < 2 || !!singleGroup} className="rounded-lg bg-brand px-3 py-2 text-sm text-white enabled:hover:bg-brand-hover disabled:opacity-40">Объединить</button>
         <button type="button" onClick={split} disabled={selectedGroups.length === 0} className={buttonClass}>Разделить</button>
@@ -288,7 +288,7 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
               const box = bounds(members)
               return (
                 <div key={group.id} data-workspace-group={group.id} aria-label={`Контейнер: ${group.name}`}
-                  className={`pointer-events-none absolute rounded-2xl border-2 border-dashed ${group.projectIds.every((id) => selected.includes(id)) ? 'border-brand bg-brand-soft/60' : 'border-line-strong bg-surface/50'}`}
+                  className={`pointer-events-none absolute rounded-2xl border-2 border-dashed ${group.projectIds.every((id) => selected.includes(id)) ? 'border-brand bg-brand-soft/60' : 'border-line-strong bg-white/50'}`}
                   style={{ left: box.left, top: box.top, width: box.width, height: box.height }}>
                   <button type="button" data-drag-group={group.id} onClick={() => setSelected(group.projectIds)}
                     className="pointer-events-auto absolute left-3 top-2 max-w-[calc(100%_-_1.5rem)] cursor-grab truncate rounded-md px-2 text-sm font-medium text-body">
@@ -302,7 +302,7 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
               return (
                 <article key={node.projectId} data-project-id={node.projectId} data-selected={selected.includes(node.projectId) || undefined}
                   aria-label={`Карта: ${project.name}`}
-                  className={`absolute overflow-hidden rounded-xl border bg-surface shadow-sm ${selected.includes(node.projectId) ? 'border-brand ring-2 ring-brand-border' : 'border-line-strong'}`}
+                  className={`absolute overflow-hidden rounded-xl border bg-white shadow-sm ${selected.includes(node.projectId) ? 'border-brand ring-2 ring-brand-border' : 'border-line-strong'}`}
                   style={{ left: node.x, top: node.y, width: WIDTH, height: HEIGHT, zIndex: selected.includes(node.projectId) ? 2 : 1 }}>
                   <div className="flex h-12 cursor-grab items-center gap-2 border-b border-line px-3 select-none">
                     <input type="checkbox" aria-label={`Выбрать карту: ${project.name}`} checked={selected.includes(node.projectId)} onChange={() => toggle(node.projectId)} />
@@ -324,7 +324,7 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
             <div><p className="text-lg font-semibold text-ink">Добавьте карты в Workspace</p><p className="mt-2 text-sm text-muted">Выберите карты в общем списке карт.</p></div>
           </div>}
         </div>
-        <aside className="max-h-[65dvh] overflow-y-auto border-t border-line bg-surface p-4 md:max-h-[max(420px,calc(100dvh-24rem))] md:border-t-0 md:border-l">
+        <aside className="max-h-[65dvh] overflow-y-auto border-t border-line bg-white p-4 md:max-h-[max(420px,calc(100dvh-24rem))] md:border-t-0 md:border-l">
           <p role="status" className="text-sm font-semibold text-ink">Выделено карт: {selected.length}</p>
           <p className="mt-2 text-xs leading-5 text-muted">Shift + клик или рамка на свободном месте — выбор нескольких карт. Объединённые карты перемещаются вместе.</p>
           {singleGroup && <label key={singleGroup.id + singleGroup.name} className="mt-4 grid gap-1 text-xs text-muted">Название контейнера

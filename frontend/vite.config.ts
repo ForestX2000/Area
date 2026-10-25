@@ -6,6 +6,4 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   optimizeDeps: { include: ['pannellum'] },
-  // В разработке API отдаёт FastAPI на :8000; в Docker тот же путь проксирует nginx.
-  server: { proxy: { '/api': 'http://127.0.0.1:8000' } },
 });

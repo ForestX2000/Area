@@ -11,22 +11,10 @@ async function stored(page: Page): Promise<WorkspaceCollection> {
   return page.evaluate(() => JSON.parse(localStorage.getItem('space-map-workspaces')!))
 }
 
-// Workspace больше не создаются из формы проекта, поэтому тест сохраняет его в хранилище напрямую.
-async function seedWorkspace(page: Page, name: string) {
-  await page.evaluate((workspaceName) => {
-    const saved = JSON.parse(localStorage.getItem('space-map-workspaces') ?? 'null')
-    const collection = saved?.version === 1 ? saved : { version: 1, activeId: '', workspaces: [] }
-    const workspace = { id: crypto.randomUUID(), name: workspaceName, description: '', nodes: [], groups: [], view: { x: 0, y: 0, zoom: 1 } }
-    collection.workspaces.push(workspace)
-    collection.activeId = workspace.id
-    localStorage.setItem('space-map-workspaces', JSON.stringify(collection))
-  }, name)
-}
-
 async function createFromProjects(page: Page, name: string) {
-  await page.goto('/')
-  await seedWorkspace(page, name)
-  await page.reload()
+  await page.goto('/?create=workspace')
+  await page.getByLabel('Название проекта', { exact: true }).fill(name)
+  await page.getByRole('button', { name: 'Создать Workspace', exact: true }).click()
   await page.getByRole('article').filter({ has: page.getByRole('heading', { name, exact: true }) }).getByRole('link', { name: 'Открыть Workspace' }).click()
 }
 
@@ -281,7 +269,7 @@ test('Workspace previews show the 2D plan even when the project has a panorama',
     const [plan, panorama] = await Promise.all([makeImage('#2863c7'), makeImage('#dd2538')])
     localStorage.setItem('space-map-points', JSON.stringify({ a: [{ id: 'room', title: 'Room', x: 50, y: 50 }] }))
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('space-map-db')
+      const request = indexedDB.open('space-map-db', 1)
       request.onupgradeneeded = () => request.result.createObjectStore('map-images')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

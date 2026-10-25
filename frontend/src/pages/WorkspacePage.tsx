@@ -49,10 +49,10 @@ export default function WorkspacePage() {
     navigate(remaining.length ? `/workspace/${remaining[0].id}` : '/')
   }
 
-  if (!active) return <section className="rounded-2xl border border-line bg-surface p-8 text-center">
+  if (!active) return <section className="rounded-2xl border border-line bg-white p-8 text-center">
     <h1 className="text-2xl font-bold text-ink">Пока нет Workspace</h1>
-    <p className="mt-3 text-muted">Сохранённые Workspace отображаются в общем списке «Мои проекты».</p>
-    <Link to="/" className="mt-5 inline-flex rounded-lg bg-brand px-4 py-2 text-white">К моим проектам</Link>
+    <p className="mt-3 text-muted">Workspace создаются в общем списке «Мои проекты».</p>
+    <Link to="/?create=workspace" className="mt-5 inline-flex rounded-lg bg-brand px-4 py-2 text-white">Перейти к созданию проекта</Link>
   </section>
 
   return (
@@ -68,7 +68,7 @@ export default function WorkspacePage() {
         <label className="grid min-w-0 gap-1 text-xs text-muted">Workspace
           <select aria-label="Выбрать Workspace" value={active.id}
             onChange={(event) => { updateCollection({ ...collection, activeId: event.target.value }); navigate(`/workspace/${event.target.value}`) }}
-            className="w-60 max-w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-body">
+            className="w-60 max-w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-body">
             {collection.workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
           </select>
         </label>
@@ -80,7 +80,7 @@ export default function WorkspacePage() {
               else event.target.value = active.name
             }}
             onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
-            className="w-60 max-w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-body" />
+            className="w-60 max-w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-body" />
         </label>
         <button type="button" onClick={removeWorkspace} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-brand-border hover:text-brand">Удалить Workspace</button>
       </div>

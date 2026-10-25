@@ -54,7 +54,7 @@ async function seedLegacyMedia(page: Page) {
   await page.evaluate(async (data) => {
     const blob = await (await fetch(`data:image/png;base64,${data}`)).blob()
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('space-map-db')
+      const request = indexedDB.open('space-map-db', 1)
       request.onupgradeneeded = () => request.result.createObjectStore('map-images')
       request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
     })
@@ -194,7 +194,7 @@ test('deleting the original floor cleans only its media and leaves later floor p
   const secondId = await add(page)
   await draw(page, 'Эллипс')
   await page.evaluate(async (secondId) => {
-    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db'); request.onsuccess = () => resolve(request.result) })
+    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db', 1); request.onsuccess = () => resolve(request.result) })
     const blob = await new Promise<Blob>((resolve) => { const request = db.transaction('map-images').objectStore('map-images').get('building'); request.onsuccess = () => resolve(request.result) })
     await new Promise<void>((resolve) => {
       const tx = db.transaction('map-images', 'readwrite')
@@ -211,7 +211,7 @@ test('deleting the original floor cleans only its media and leaves later floor p
   await page.getByRole('dialog', { name: 'Удалить этаж?', exact: true }).getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(floorButton(page)).toHaveText('Этаж: 2▾')
   const keys = await page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db'); request.onsuccess = () => resolve(request.result) })
+    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db', 1); request.onsuccess = () => resolve(request.result) })
     const keys = await new Promise<IDBValidKey[]>((resolve) => { const request = db.transaction('map-images').objectStore('map-images').getAllKeys(); request.onsuccess = () => resolve(request.result) })
     db.close(); return keys
   })
@@ -275,7 +275,7 @@ test('failed deletion leaves the floor and media intact; clicking outside saves 
   await expect(picker(page).getByRole('alert')).toContainText('Не удалось удалить этаж')
   expect((await project(page)).floors).toHaveLength(2)
   const exists = await page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db'); request.onsuccess = () => resolve(request.result) })
+    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db', 1); request.onsuccess = () => resolve(request.result) })
     const blob = await new Promise<Blob>((resolve) => { const request = db.transaction('map-images').objectStore('map-images').get('building'); request.onsuccess = () => resolve(request.result) })
     db.close(); return !!blob
   })

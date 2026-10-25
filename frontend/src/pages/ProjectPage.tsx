@@ -111,7 +111,7 @@ export default function ProjectPage() {
         ← Назад к проектам
       </Link>
 
-      <div className="mt-6 rounded-2xl border border-line bg-surface p-6 sm:p-8">
+      <div className="mt-6 rounded-2xl border border-line bg-white p-6 sm:p-8">
         <p className="text-sm font-medium text-brand">
           ПРОЕКТ
         </p>
@@ -157,7 +157,7 @@ export default function ProjectPage() {
 
       <dialog ref={dialogRef} aria-labelledby="edit-project-title"
         onCancel={(event) => { event.preventDefault(); setEditingField(null) }}
-        className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-y-auto rounded-2xl border border-line bg-surface p-6 text-body shadow-xl backdrop:bg-black/35 sm:p-8">
+        className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-y-auto rounded-2xl border border-line bg-white p-6 text-body shadow-xl backdrop:bg-black/35 sm:p-8">
         <div className="flex items-center justify-between gap-3">
           <h2 id="edit-project-title" className="text-xl font-bold text-ink">Редактирование проекта</h2>
           <button type="button" aria-label="Закрыть окно редактирования" onClick={() => setEditingField(null)}

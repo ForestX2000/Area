@@ -1,9 +1,11 @@
-
-# Список зависимостей, необходимых для работы бэкенда
 fastapi
 uvicorn[standard]
 pytest
 httpx
 python-dotenv
 sqlalchemy
+psycopg[binary]
+alembic
 python-multipart
+numpy
+opencv-python-headless

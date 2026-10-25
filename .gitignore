@@ -1,48 +1,27 @@
-# --- Репозиторий (корень) ---
-# Пользовательский кейс / PDF-материалы — не храним в Git
-*.pdf
-кейс инфа.pdf
+# Зависимости
+node_modules/
 
-# OS
-.DS_Store
-Thumbs.db
+# Сборка
+dist/
+build/
+.vite/
 
-# IDE
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Результаты тестов
+test-results/
+playwright-report/
+blob-report/
 
-# Логи
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Python (бэкенд)
+# Python
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-venv/
+*.pyc
 .venv/
-env/
+venv/
+
+# Локальные данные и секреты
 .env
 .env.*
 !.env.example
-
-# Тесты
-.pytest_cache/
-.coverage
-htmlcov/
-
-
-# Сборка (если когда-нибудь будет в корне)
-dist/
-build/
-*.local
+data/media/
+*.log
+.DS_Store
+Thumbs.db

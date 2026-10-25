@@ -16,7 +16,7 @@ const canvas = (page: Page) => page.getByRole('application', { name: 'Холст
 const floorDrawings = (page: Page, floorId: string): Promise<DrawingObject[]> => page.evaluate((id) =>
   JSON.parse(localStorage.getItem('space-map-projects')!)[0].floors.find((floor: { id: string }) => floor.id === id).drawings, floorId)
 
-test('Workspace works as project folders: create a folder, drop a map into it, open and empty it', async ({ page }) => {
+test('Workspace is created from the top bar and holds maps added inside it', async ({ page }) => {
   await seed(page, [
     { id: 'office', name: 'Офис', description: '', createdAt: '2026-10-25' },
     { id: 'store', name: 'Склад', description: '', createdAt: '2026-10-25' },
@@ -24,29 +24,19 @@ test('Workspace works as project folders: create a folder, drop a map into it, o
   await page.goto('/')
   const filters = page.getByRole('navigation', { name: 'Фильтр проектов' })
   await filters.getByRole('button', { name: 'Workspace', exact: true }).click()
-  await expect(page.getByText('Нету папок проектов')).toBeVisible()
+  await expect(page.getByText('Нету Workspace')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Создать проект' }).first().click()
-  await expect(page.getByRole('heading', { name: 'Создание папки' })).toBeVisible()
-  await page.getByLabel('Название папки').fill('Филиал на Ленина')
-  await page.getByRole('button', { name: 'Создать папку', exact: true }).click()
-  const folder = page.getByRole('article', { name: 'Папка: Филиал на Ленина', exact: true })
-  await expect(folder).toBeVisible()
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('space-map-projects')!).length)).toBe(2)
+  await page.getByRole('button', { name: '+ Workspace', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Создание Workspace' })).toBeVisible()
+  await page.getByLabel('Название Workspace').fill('Филиал на Ленина')
+  await page.getByRole('button', { name: 'Создать Workspace', exact: true }).click()
+  const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Филиал на Ленина', exact: true }) })
+  await expect(card).toBeVisible()
 
-  await filters.getByRole('button', { name: 'Все', exact: true }).click()
-  await page.locator('[draggable="true"]').filter({ hasText: 'Офис' }).dragTo(folder)
-  await expect(folder).toContainText('Карт в папке: 1')
-
-  await folder.getByRole('button', { name: 'Открыть папку' }).click()
-  const opened = page.getByRole('region', { name: 'Папка Филиал на Ленина' })
-  await expect(opened.getByRole('heading', { name: 'Офис' })).toBeVisible()
-  await opened.getByLabel('Карта для папки').selectOption({ label: 'Склад' })
-  await opened.getByRole('button', { name: 'Добавить в папку' }).click()
-  await expect(opened.getByRole('heading', { name: 'Склад' })).toBeVisible()
-  await opened.getByRole('button', { name: 'Убрать из папки' }).first().click()
-  await expect(opened.getByRole('heading', { name: 'Офис' })).toHaveCount(0)
-  // Карта убрана только из папки, сам проект остался.
+  await card.getByRole('link', { name: 'Открыть Workspace' }).click()
+  await page.getByRole('button', { name: 'Добавить карту: Офис', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Добавить карту: Склад', exact: true })).toBeVisible()
+  // Карта остаётся самостоятельным проектом, Workspace её только объединяет.
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('space-map-projects')!).length)).toBe(2)
 })
 

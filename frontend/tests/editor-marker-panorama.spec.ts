@@ -39,7 +39,20 @@ async function selectMarker(page: Page, point: Point, name: string) {
 
 async function upload(page: Page, label: 'Создать панораму' | 'Заменить панораму', name: string) {
   const image = await page.evaluate(panoramaImage)
-  await page.getByLabel(label, { exact: true }).setInputFiles({ name, mimeType: 'image/png', buffer: Buffer.from(image, 'base64') })
+  const buffer = Buffer.from(image, 'base64')
+  await page.route('**/api/panoramas/stitch', (route) => route.fulfill({
+    status: 200, contentType: 'image/jpeg', body: buffer,
+    headers: { 'X-Panorama-Horizontal-Coverage': '360', 'X-Panorama-Vertical-Coverage': '180', 'X-Panorama-Used-Images': '0,1', 'X-Panorama-Total-Images': '2' },
+  }))
+  await page.getByRole('button', { name: label === 'Заменить панораму' ? 'Пересобрать из фото' : 'Создать панораму', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: /^Собрать панораму/ })
+  await dialog.getByLabel('Добавить снимки', { exact: true }).setInputFiles([
+    { name: `${name}-1.png`, mimeType: 'image/png', buffer },
+    { name: `${name}-2.png`, mimeType: 'image/png', buffer },
+  ])
+  await dialog.getByRole('button', { name: 'Собрать панораму', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Сохранить панораму', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
   await expect(page.getByText('Панорама: загружена', { exact: true })).toBeVisible()
 }
 

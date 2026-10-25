@@ -16,4 +16,6 @@ export interface Project {
   drawings?: DrawingObject[]
   floors?: ProjectFloor[]
   activeFloorId?: string
+  /** Постоянная публичная ссылка на карту; создаётся один раз. */
+  shareId?: string
 }

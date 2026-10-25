@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import DrawingPlan from '../components/DrawingPlan'
 import PanoramaViewer from '../components/PanoramaViewer'
+import ShareDialog from '../components/ShareDialog'
 import RouteOverlay from '../components/route/RouteOverlay'
 import RoutePanel from '../components/route/RoutePanel'
 import { findRoute } from '../utils/routing'
@@ -63,6 +64,7 @@ function ObjectViewer() {
   const [requestedId, setRequestedId] = useState<string | null>(null)
   const [viewerUrl, replaceViewerUrl] = useObjectUrl()
   const [error, setError] = useState('')
+  const [shareOpen, setShareOpen] = useState(false)
   const [route, setRoute] = useRouteRequest(projectId ?? '')
   const routeResult = route.from && route.to && project ? findRoute(getFloors(project), { from: route.from, to: route.to }) : null
 
@@ -151,6 +153,8 @@ function ObjectViewer() {
       <nav aria-label="Навигация просмотра" className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
         <Link to="/" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">← Все объекты</Link>
         <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-ink" title={project.name}>{project.name}</h1>
+        <button type="button" onClick={() => setShareOpen(true)} className="rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold text-brand hover:bg-brand-soft">Поделиться</button>
+        {shareOpen && <ShareDialog project={project} onClose={() => setShareOpen(false)} />}
         {floors.length > 1 && (
           <label className="flex items-center gap-2 text-sm text-muted">
             Этаж

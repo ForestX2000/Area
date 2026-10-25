@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProjectPreview from '../components/ProjectPreview'
+import ShareDialog from '../components/ShareDialog'
 import { useAuth } from '../contexts/useAuth'
 import { getFloors } from '../utils/floorStorage'
 import { projectHasPanorama } from '../utils/objectPanoramas'
 import { useProjects } from '../utils/useProjects'
+import type { Project } from '../types/project'
 
 const linkClass = 'inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition'
 
@@ -14,6 +16,7 @@ export default function ObjectsPage() {
   const projects = useProjects()
   const [query, setQuery] = useState('')
   const [withPanorama, setWithPanorama] = useState<Record<string, boolean>>({})
+  const [shared, setShared] = useState<Project | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -88,12 +91,17 @@ export default function ObjectsPage() {
                       </button>
                     )}
                   </div>
+                  <button type="button" onClick={() => setShared(project)}
+                    className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold text-brand hover:bg-brand-soft">
+                    Поделиться
+                  </button>
                 </div>
               </li>
             )
           })}
         </ul>
       )}
+      {shared && <ShareDialog project={shared} onClose={() => setShared(null)} />}
     </div>
   )
 }

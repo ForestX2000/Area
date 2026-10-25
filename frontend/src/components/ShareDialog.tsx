@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Project } from '../types/project'
-import { createShare, ShareError, shareUrl } from '../utils/share'
+import { publishShare, ShareError, shareUrl } from '../utils/share'
 
 export default function ShareDialog({ project, onClose }: { project: Project; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -18,7 +18,7 @@ export default function ShareDialog({ project, onClose }: { project: Project; on
     setState({ kind: 'loading' })
     setCopied(false)
     try {
-      setState({ kind: 'ready', url: shareUrl(await createShare(project)) })
+      setState({ kind: 'ready', url: shareUrl(await publishShare(project)) })
     } catch (error) {
       setState({ kind: 'error', message: error instanceof ShareError ? error.message : 'Не удалось создать ссылку.' })
     }
@@ -48,7 +48,7 @@ export default function ShareDialog({ project, onClose }: { project: Project; on
         </div>
         <p className="text-sm leading-6 text-muted">
           По ссылке проект откроется без входа и регистрации, только для просмотра: план, чертежи всех этажей, точки и панорамы 360°.
-          Ссылка фиксирует текущее состояние — после правок создай новую.
+          Ссылка постоянная: она всегда открывает актуальную версию карты.
         </p>
 
         {state.kind === 'ready' ? (
@@ -67,7 +67,7 @@ export default function ShareDialog({ project, onClose }: { project: Project; on
         ) : (
           <button type="button" onClick={create} disabled={state.kind === 'loading'}
             className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60">
-            {state.kind === 'loading' ? 'Загружаем проект…' : 'Создать ссылку'}
+            {state.kind === 'loading' ? 'Загружаем проект…' : project.shareId ? 'Обновить и показать ссылку' : 'Создать ссылку'}
           </button>
         )}
         {state.kind === 'error' && <p role="alert" className="rounded-lg bg-brand-soft p-3 text-sm text-brand-strong">{state.message}</p>}

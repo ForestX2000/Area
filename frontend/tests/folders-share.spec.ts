@@ -108,3 +108,37 @@ test.describe('sharing', () => {
     await expect(page).toHaveURL(/\/share\/missing-share$/)
   })
 })
+
+test('a regular user sees Поделиться on the objects list and in the viewer', async ({ page }) => {
+  await seed(page, [{ id: 'expo', name: 'Выставочный центр', description: '', createdAt: '2026-10-25', drawings: [room('hall', 'Главный зал')] }],
+    { id: 'viewer', name: 'Мария', email: 'user@spacemap.ru', role: 'user' })
+  await page.route('**/api/shares', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'user-share-1' }) }))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Поделиться', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Выставочный центр' })
+  await dialog.getByRole('button', { name: 'Создать ссылку' }).click()
+  await expect(dialog.getByLabel('Ссылка для просмотра')).toHaveValue(/\/share\/user-share-1$/)
+  await dialog.getByRole('button', { name: 'Закрыть' }).click()
+  await page.goto('/objects/expo?mode=2d')
+  await page.getByRole('button', { name: 'Поделиться', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Выставочный центр' })).toBeVisible()
+})
+
+test('republishing updates the same link instead of creating a new one', async ({ page }) => {
+  await seed(page, [{ id: 'expo', name: 'Выставочный центр', description: '', createdAt: '2026-10-25', drawings: [room('hall', 'Главный зал')] }])
+  const methods: string[] = []
+  await page.route('**/api/shares**', async (route) => {
+    methods.push(route.request().method())
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'stable-share-1' }) })
+  })
+  await page.goto('/projects/expo/editor')
+  await page.getByRole('button', { name: 'Поделиться' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Выставочный центр' })
+  await dialog.getByRole('button', { name: 'Создать ссылку' }).click()
+  await expect(dialog.getByLabel('Ссылка для просмотра')).toHaveValue(/\/share\/stable-share-1$/)
+  await dialog.getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await page.getByRole('button', { name: 'Поделиться' }).click()
+  await page.getByRole('dialog', { name: 'Выставочный центр' }).getByRole('button', { name: 'Обновить и показать ссылку' }).click()
+  await expect(page.getByRole('dialog', { name: 'Выставочный центр' }).getByLabel('Ссылка для просмотра')).toHaveValue(/\/share\/stable-share-1$/)
+  expect(methods).toEqual(['POST', 'PUT'])
+})

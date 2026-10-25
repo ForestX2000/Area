@@ -1,6 +1,7 @@
 import type { DrawingObject } from '../types/drawing'
 import type { MapPoint } from '../types/mapPoint'
 import type { Project } from '../types/project'
+import { getProjects, saveProjects } from './projectStorage'
 import { floorStorageId, getFloors } from './floorStorage'
 import { getHotspots, type PanoramaHotspot } from './hotspotStorage'
 import { getMapImage, getPanorama } from './mapStorage'
@@ -30,8 +31,7 @@ export interface SharedProject {
 
 export class ShareError extends Error {}
 
-/** Загружает снимок проекта на сервер и возвращает id публичной ссылки. */
-export async function createShare(project: Project): Promise<string> {
+async function buildForm(project: Project): Promise<FormData> {
   const files: { name: string; blob: Blob }[] = []
   const attach = (blob: Blob) => {
     const name = `f${files.length}`
@@ -64,19 +64,45 @@ export async function createShare(project: Project): Promise<string> {
     const typed = file.blob.type.startsWith('image/') ? file.blob : new Blob([file.blob], { type: 'image/jpeg' })
     form.append('files', typed, file.name)
   }
+  return form
+}
 
+async function send(method: 'POST' | 'PUT', path: string, form: FormData): Promise<string> {
   let response: Response
   try {
-    response = await fetch(`${API_URL}/shares`, { method: 'POST', body: form })
+    response = await fetch(`${API_URL}${path}`, { method, body: form })
   } catch {
-    throw new ShareError('Сервер недоступен. Ссылку можно создать, когда запущен backend.')
+    throw new ShareError('Сервер недоступен. Ссылку можно обновить, когда запущен backend.')
   }
   if (!response.ok) {
     const detail = await response.json().then((body) => body?.detail).catch(() => '')
-    throw new ShareError(typeof detail === 'string' && detail ? detail : 'Не удалось создать ссылку.')
+    throw new ShareError(typeof detail === 'string' && detail ? detail : 'Не удалось сохранить проект для ссылки.')
   }
   const { id } = await response.json() as { id: string }
   return id
+}
+
+/**
+ * Публикует карту. Ссылка создаётся один раз и дальше остаётся прежней:
+ * повторные вызовы только обновляют данные на сервере.
+ */
+export async function publishShare(project: Project): Promise<string> {
+  const form = await buildForm(project)
+  if (project.shareId) return send('PUT', `/shares/${encodeURIComponent(project.shareId)}`, form)
+  const id = await send('POST', '/shares', form)
+  saveProjects(getProjects().map((item) => item.id === project.id ? { ...item, shareId: id } : item))
+  return id
+}
+
+/** Тихо обновляет опубликованную версию карты после сохранения. Без ссылки ничего не делает. */
+export async function syncSharedProject(projectId: string): Promise<void> {
+  const project = getProjects().find((item) => item.id === projectId)
+  if (!project?.shareId) return
+  try {
+    await send('PUT', `/shares/${encodeURIComponent(project.shareId)}`, await buildForm(project))
+  } catch {
+    // Нет сети или сервера: в следующий раз обновится при сохранении или при «Поделиться».
+  }
 }
 
 export async function loadShare(shareId: string): Promise<SharedProject> {

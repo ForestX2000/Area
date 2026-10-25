@@ -404,7 +404,8 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     <div className="project-editor bg-surface-muted" onKeyDown={(event) => {
       if (event.key === 'Escape' && mobilePanel) { setMobilePanel(null); event.stopPropagation() }
     }}>
-      <EditorNavigation projectId={projectId} can3D={navigationPanoramas.length > 0} onModeChange={openLastPanorama} />
+      <EditorNavigation projectId={projectId} can3D={navigationPanoramas.length > 0 ? true : undefined}
+        onModeChange={navigationPanoramas.length > 0 ? openLastPanorama : () => navigate(floorUrl(`/projects/${projectId}/map?mode=3d`, floorId, true))} />
       {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
       <div className="editor-workspace relative grid min-h-0 overflow-hidden border border-line lg:h-[calc(100dvh-12rem)] lg:min-h-[38rem] lg:grid-cols-[240px_minmax(0,1fr)_240px] lg:rounded-b-xl">
         <aside id="editor-properties" aria-label="Свойства и объекты" className={`editor-panel editor-properties order-3 overflow-y-auto border-l border-line bg-surface ${mobilePanel === 'properties' ? 'is-open' : ''}`}>

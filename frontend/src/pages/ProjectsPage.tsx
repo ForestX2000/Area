@@ -154,6 +154,7 @@ function ProjectsPage() {
   // Отдельные карты: те, что не входят ни в один Workspace.
   const standaloneProjects = projects.filter((project) =>
     !workspaces.workspaces.some((workspace) => workspace.nodes.some((node) => node.projectId === project.id)));
+  const mapsToShow = filter === 'map' ? standaloneProjects : filter === 'all' ? projects : [];
 
   return (
     <div className="min-h-screen bg-page text-body">
@@ -322,7 +323,7 @@ function ProjectsPage() {
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-body">Все проекты</h3>
               <span className="text-xs text-muted">
-                {(filter === 'map' ? standaloneProjects.length : filter === 'workspace' ? workspaces.workspaces.length : standaloneProjects.length + workspaces.workspaces.length)} в списке
+                {(filter === 'map' ? standaloneProjects.length : filter === 'workspace' ? workspaces.workspaces.length : projects.length + workspaces.workspaces.length)} в списке
               </span>
             </div>
 
@@ -330,7 +331,7 @@ function ProjectsPage() {
               {showWorkspaces && workspaces.workspaces.map((workspace) => <ProjectCard key={`workspace-${workspace.id}`}
                 id={workspace.id} name={workspace.name} description={workspace.description || 'Общее пространство для карт.'} buildingsCount={0} floorsCount={0}
                 workspace={workspace} projects={projects} onDelete={() => handleDeleteWorkspace(workspace.id)} />)}
-              {showMaps && standaloneProjects.map((project) => (
+              {showMaps && mapsToShow.map((project) => (
                 <ProjectCard
                   key={project.id}
                   id={project.id}

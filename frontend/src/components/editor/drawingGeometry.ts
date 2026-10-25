@@ -1,7 +1,7 @@
 import type { DrawingObject, DrawingTool, MarkerKind, Point } from '../../types/drawing'
 
 export const PIXELS_PER_METRE = 50
-export const MIN_ZOOM = 0.25
+export const MIN_ZOOM = 0.01
 export const MAX_ZOOM = 4
 
 export const SHAPE_TOOLS: { id: DrawingTool; label: string; icon: string }[] = [

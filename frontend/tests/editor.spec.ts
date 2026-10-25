@@ -219,7 +219,8 @@ test('wheel pans only this canvas, Ctrl zooms and respects zoom limits', async (
   expect(await dispatchWheel(true, -10000)).toBe(true)
   await expect.poll(() => scale(page)).toBe(4)
   await dispatchWheel(true, 10000)
-  await expect.poll(() => scale(page)).toBe(0.25)
+  // Отдаление без практического лимита, приближение по-прежнему до 400%.
+  await expect.poll(() => scale(page)).toBeCloseTo(0.01, 5)
 })
 
 test('editing geometry and labels persists; selection shows current properties', async ({ page }) => {

@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import files, health, panoramas, projects
+from app.api.routes import files, health, panoramas, projects, shares
 
 
 app = FastAPI(
@@ -24,6 +24,7 @@ app.include_router(health.router)
 app.include_router(projects.router)
 app.include_router(files.router)
 app.include_router(panoramas.router)
+app.include_router(shares.router)
 
 
 @app.get("/")

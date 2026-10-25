@@ -11,6 +11,7 @@ import ObjectsPage from "./pages/ObjectsPage";
 import ObjectViewerPage from "./pages/ObjectViewerPage";
 import ProfilePage from "./pages/ProfilePage";
 import StatsPage from "./pages/StatsPage";
+import SharedProjectPage from "./pages/SharedProjectPage";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import { useAuth } from "./contexts/useAuth";
 import { isAdmin } from "./utils/auth";
@@ -51,6 +52,8 @@ export default function App() {
       <AnalyticsTracker />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Публичная ссылка: просмотр без входа. */}
+        <Route path="/share/:shareId" element={<SharedProjectPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>

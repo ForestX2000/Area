@@ -22,6 +22,7 @@ import { useProjectFloor } from '../utils/useProjects'
 import { deletePanorama, getPanorama, savePanorama } from '../utils/mapStorage'
 import { useObjectUrl } from '../utils/useObjectUrl'
 import { useConfirmation } from '../contexts/useConfirmation'
+import { readClipboard, writeClipboard } from '../utils/editorClipboard'
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -56,8 +57,16 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
   const [menuOpens, setMenuOpens] = useState(0)
   const [undoCount, setUndoCount] = useState(0)
   const [tutorialRun, setTutorialRun] = useState(() => tutorialDone() ? 0 : 1)
-  const [clipboard, setClipboard] = useState<DrawingObject[]>([])
-  const hasClipboard = clipboard.length > 0
+  const clipboardSource = `${projectId}:${floorId}`
+  const [clipboard, setClipboardState] = useState(readClipboard)
+  const hasClipboard = clipboard.items.length > 0
+  // С другого этажа вставляем на те же координаты — план ложится ровно поверх.
+  const fromOtherFloor = clipboard.source !== clipboardSource
+  const setClipboard = useCallback((items: DrawingObject[]) => {
+    const next = { source: clipboardSource, items }
+    setClipboardState(next)
+    writeClipboard(next)
+  }, [clipboardSource])
   const [route, setRoute] = useRouteRequest(projectId ?? '')
 
   const project = projectId
@@ -130,14 +139,15 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     const items = objects.filter((object) => selectedIds.includes(object.id))
     if (items.length) setClipboard(structuredClone(items))
     return items.length > 0
-  }, [objects, selectedIds])
+  }, [objects, selectedIds, setClipboard])
 
-  const pasteObjects = useCallback((items: DrawingObject[], at?: Point) => {
+  const pasteObjects = useCallback((items: DrawingObject[], at?: Point, keepPosition = false) => {
     if (!items.length) return
     const box = objectsBounds(items)
     const cell = gridSize * PIXELS_PER_METRE
     const snap = (value: number) => snapToGrid ? Math.round(value / cell) * cell : value
-    const offset = at ? { x: snap(at.x - (box.left + box.right) / 2), y: snap(at.y - (box.top + box.bottom) / 2) } : { x: cell, y: cell }
+    const offset = at ? { x: snap(at.x - (box.left + box.right) / 2), y: snap(at.y - (box.top + box.bottom) / 2) }
+      : keepPosition ? { x: 0, y: 0 } : { x: cell, y: cell }
     // Панорама принадлежит исходной метке, копия получает свою позже.
     const pasted = items.map((object) => ({ ...structuredClone(object), id: crypto.randomUUID(), panoramaKey: undefined,
       points: object.points.map((point) => ({ x: point.x + offset.x, y: point.y + offset.y })) }))
@@ -146,7 +156,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     setSelectedIds(pasted.map((object) => object.id))
     setSelectedVertex(null)
     setTool('select')
-  }, [objects, gridSize, snapToGrid, handleObjectsChange])
+  }, [objects, gridSize, snapToGrid, handleObjectsChange, setClipboard])
 
   const reorderSelection = useCallback((front: boolean) => {
     const chosen = objects.filter((object) => selectedIds.includes(object.id))
@@ -191,7 +201,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
         if (copySelection()) event.preventDefault()
       } else if (event.code === 'KeyV' || event.key.toLowerCase() === 'v') {
         event.preventDefault()
-        pasteObjects(clipboard)
+        pasteObjects(clipboard.items, undefined, fromOtherFloor)
       } else if (event.code === 'KeyD' || event.key.toLowerCase() === 'd') {
         event.preventDefault()
         pasteObjects(objects.filter((object) => selectedIds.includes(object.id)))
@@ -199,7 +209,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleUndo, handleRedo, handleDelete, selectedIds, objects, showServiceMarks, copySelection, pasteObjects, clipboard])
+  }, [handleUndo, handleRedo, handleDelete, selectedIds, objects, showServiceMarks, copySelection, pasteObjects, clipboard, fromOtherFloor])
 
   const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
     setSelectedIds(ids)
@@ -316,7 +326,9 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
       { label: 'Маршрут сюда', onSelect: () => setRoute({ ...route, to: endpoint }) },
     ]
     if (!target) return [
-      { label: 'Вставить сюда', shortcut: 'Ctrl+V', disabled: !hasClipboard, onSelect: () => pasteObjects(clipboard, current.point) },
+      ...(fromOtherFloor && hasClipboard ? [{ label: 'Вставить с другого этажа на те же места', shortcut: 'Ctrl+V', onSelect: () => pasteObjects(clipboard.items, undefined, true) }] : []),
+      { label: 'Вставить сюда', disabled: !hasClipboard, onSelect: () => pasteObjects(clipboard.items, current.point) },
+      { label: 'Копировать весь этаж', disabled: !objects.length, onSelect: () => setClipboard(structuredClone(objects)) },
       { label: 'Выделить всё', shortcut: 'Ctrl+A', disabled: !objects.length, onSelect: () => { setSelectedIds(objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object) => object.id)); setTool('select') } },
       { label: 'Поставить инфо-метку', onSelect: () => {
         const marker = { ...createDrawing('marker-info', current.point, current.point, ''), id: crypto.randomUUID() }
@@ -329,7 +341,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     const floorTarget = isStairs(target) && target.targetFloorId ? floors.find((floor) => floor.id === target.targetFloorId) : undefined
     return [
       { label: 'Копировать', shortcut: 'Ctrl+C', onSelect: () => { copySelection() } },
-      { label: 'Вставить', shortcut: 'Ctrl+V', disabled: !hasClipboard, onSelect: () => pasteObjects(clipboard) },
+      { label: fromOtherFloor && hasClipboard ? 'Вставить с другого этажа' : 'Вставить', shortcut: 'Ctrl+V', disabled: !hasClipboard, onSelect: () => pasteObjects(clipboard.items, undefined, fromOtherFloor) },
       { label: 'Дублировать', shortcut: 'Ctrl+D', onSelect: () => pasteObjects(objects.filter((object) => selectedIds.includes(object.id))) },
       'separator',
       { label: 'На передний план', onSelect: () => reorderSelection(true) },

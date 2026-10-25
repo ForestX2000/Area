@@ -17,9 +17,11 @@ interface PanoramaViewerProps {
   navigation?: ReactNode
   /** Разрешает ставить и менять метки внутри панорамы. */
   editable?: boolean
+  /** Метки из другого источника (публичная ссылка) вместо локального хранилища. */
+  initialHotspots?: PanoramaHotspot[]
 }
 
-export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, onSelectPanorama, onClose, projectId, navigation, editable = false }: PanoramaViewerProps) {
+export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, onSelectPanorama, onClose, projectId, navigation, editable = false, initialHotspots }: PanoramaViewerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<PannellumViewer | null>(null)
@@ -27,7 +29,7 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
   const [error, setError] = useState('')
   const [hfov, setHfov] = useState(100)
   const trackedRef = useRef({ projectId, title })
-  const [hotspots, setHotspots] = useState<PanoramaHotspot[]>(() => getHotspots(projectId, pointId))
+  const [hotspots, setHotspots] = useState<PanoramaHotspot[]>(() => initialHotspots ?? getHotspots(projectId, pointId))
   const [placing, setPlacing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)

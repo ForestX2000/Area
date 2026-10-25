@@ -494,8 +494,9 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             <path d={`M ${cellSize * zoom * 5} 0 H 0 V ${cellSize * zoom * 5}`} fill="none" stroke="var(--ttk-grid-major)" strokeWidth="1" />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#${patternId}-minor)`} />
-        <rect width="100%" height="100%" fill={`url(#${patternId}-major)`} />
+        {/* При сильном отдалении линии сливаются в сплошную заливку — мелкую сетку скрываем. */}
+        {cellSize * zoom >= 4 && <rect width="100%" height="100%" fill={`url(#${patternId}-minor)`} />}
+        {cellSize * zoom * 5 >= 4 && <rect width="100%" height="100%" fill={`url(#${patternId}-major)`} />}
         <g ref={contentRef} data-canvas-content transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
           {visibleObjects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
           {overlay}

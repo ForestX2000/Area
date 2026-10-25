@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Project } from '../types/project'
-import { createShare, ShareError, shareUrl } from '../utils/share'
+import { publishShare, ShareError, shareUrl } from '../utils/share'
 
 export default function ShareDialog({ project, onClose }: { project: Project; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [state, setState] = useState<{ kind: 'loading' } | { kind: 'ready'; url: string } | { kind: 'error'; message: string }>({ kind: 'loading' })
-  const [attempt, setAttempt] = useState(0)
+  const [state, setState] = useState<{ kind: 'idle' } | { kind: 'loading' } | { kind: 'ready'; url: string } | { kind: 'error'; message: string }>({ kind: 'idle' })
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -15,15 +14,15 @@ export default function ShareDialog({ project, onClose }: { project: Project; on
     return () => dialog.close()
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    createShare(project).then((id) => {
-      if (!cancelled) setState({ kind: 'ready', url: shareUrl(id) })
-    }).catch((error) => {
-      if (!cancelled) setState({ kind: 'error', message: error instanceof ShareError ? error.message : 'Не удалось создать ссылку.' })
-    })
-    return () => { cancelled = true }
-  }, [project, attempt])
+  async function create() {
+    setState({ kind: 'loading' })
+    setCopied(false)
+    try {
+      setState({ kind: 'ready', url: shareUrl(await publishShare(project)) })
+    } catch (error) {
+      setState({ kind: 'error', message: error instanceof ShareError ? error.message : 'Не удалось создать ссылку.' })
+    }
+  }
 
   async function copy(url: string) {
     try {
@@ -48,8 +47,8 @@ export default function ShareDialog({ project, onClose }: { project: Project; on
           <button type="button" aria-label="Закрыть" onClick={onClose} className="rounded-md px-2 text-xl leading-none text-muted hover:text-brand">×</button>
         </div>
         <p className="text-sm leading-6 text-muted">
-          Просмотр по ссылке без авторизации: планы, чертежи, точки и панорамы всех этажей.
-          После изменения проекта создайте новую ссылку.
+          По ссылке проект откроется без входа и регистрации, только для просмотра: план, чертежи всех этажей, точки и панорамы 360°.
+          Ссылка постоянная: она всегда открывает актуальную версию карты.
         </p>
 
         {state.kind === 'ready' ? (
@@ -66,9 +65,9 @@ export default function ShareDialog({ project, onClose }: { project: Project; on
             <a href={state.url} target="_blank" rel="noreferrer" className="text-sm text-brand hover:underline">Открыть в новой вкладке</a>
           </div>
         ) : (
-          <button type="button" onClick={() => { setState({ kind: 'loading' }); setAttempt((value) => value + 1) }} disabled={state.kind === 'loading'}
+          <button type="button" onClick={create} disabled={state.kind === 'loading'}
             className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60">
-            {state.kind === 'loading' ? 'Создание ссылки…' : 'Повторить'}
+            {state.kind === 'loading' ? 'Загружаем проект…' : project.shareId ? 'Обновить и показать ссылку' : 'Создать ссылку'}
           </button>
         )}
         {state.kind === 'error' && <p role="alert" className="rounded-lg bg-brand-soft p-3 text-sm text-brand-strong">{state.message}</p>}

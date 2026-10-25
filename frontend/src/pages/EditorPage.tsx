@@ -23,6 +23,7 @@ import { deletePanorama, getPanorama, savePanorama } from '../utils/mapStorage'
 import { useObjectUrl } from '../utils/useObjectUrl'
 import { useConfirmation } from '../contexts/useConfirmation'
 import { readClipboard, writeClipboard } from '../utils/editorClipboard'
+import { syncSharedProject } from '../utils/share'
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -99,6 +100,13 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
       // Keep the drawing available in memory if local storage is full.
     }
   }, [objects, projectId, floorId])
+
+  // Опубликованная карта обновляется по той же ссылке, не чаще раза в полторы секунды.
+  useEffect(() => {
+    if (!projectId) return
+    const timer = window.setTimeout(() => { void syncSharedProject(projectId) }, 1500)
+    return () => window.clearTimeout(timer)
+  }, [objects, projectId])
 
   const handleObjectsChange = useCallback((next: DrawingObject[]) => {
     setHistory((previous) => JSON.stringify(previous.objects) === JSON.stringify(next) ? previous : {

@@ -57,3 +57,21 @@ def test_rejects_unsafe_files(client, tmp_path, name, content_type):
 def test_rejects_invalid_snapshot(client):
     response = client.post("/api/shares", data={"snapshot": "[1, 2]"})
     assert response.status_code == 400
+
+
+def test_update_keeps_the_same_link_and_shows_new_content(client):
+    share_id = create(client, files=[("files", ("f0", PNG, "image/png"))]).json()["id"]
+    response = client.put(
+        f"/api/shares/{share_id}",
+        data={"snapshot": json.dumps({"version": 1, "project": {"name": "Новое название"}})},
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == share_id
+    shared = client.get(f"/api/shares/{share_id}").json()
+    assert shared["snapshot"]["project"]["name"] == "Новое название"
+    assert shared["files"] == []
+
+
+def test_update_unknown_share_is_404(client):
+    response = client.put("/api/shares/unknown-share-id", data={"snapshot": "{}"})
+    assert response.status_code == 404

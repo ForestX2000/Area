@@ -398,7 +398,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
           <div className="editor-panel-heading"><h2>Свойства и объекты</h2><button type="button" aria-label="Закрыть свойства" onClick={() => setMobilePanel(null)}>×</button></div>
           <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
             panoramaError={panoramaError} onOpenPanorama={() => { if (selected) openMarkerPanorama(selected) }}
-            onUploadPanorama={handleMarkerPanoramaUpload} onDeletePanorama={handleMarkerPanoramaDelete}
+            onDeletePanorama={handleMarkerPanoramaDelete}
             onStitchPanorama={() => setStitchOpen(true)}
             selectedVertex={selectedVertex} onEditVertices={() => changeTool('vertices')}
             onAddVertex={() => {
@@ -475,7 +475,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
             <button type="button" aria-pressed={multiSelect} className="mobile-action" onClick={() => { setMultiSelect((value) => !value); setTool('select'); setPanMode(false); setMobilePanel(null) }}>Выбрать несколько</button>
             <button type="button" className="mobile-action" onClick={() => { handleSelect(objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object) => object.id), true); setPanMode(false); setMobilePanel(null) }}>Выделить всё</button>
             <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => { copySelection(); setMobilePanel(null) }}>Копировать</button>
-            <button type="button" className="mobile-action" disabled={!hasClipboard} onClick={() => { pasteObjects(clipboard); setMobilePanel(null) }}>Вставить</button>
+            <button type="button" className="mobile-action" disabled={!hasClipboard} onClick={() => { pasteObjects(clipboard.items, undefined, fromOtherFloor); setMobilePanel(null) }}>Вставить</button>
             <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => { pasteObjects(objects.filter((object) => selectedIds.includes(object.id))); setMobilePanel(null) }}>Дублировать</button>
             <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => { rotateSelection(90); setMobilePanel(null) }}>Повернуть на 90°</button>
             <button type="button" className="mobile-action" disabled={!selectedIds.length} onClick={() => reorderSelection(true)}>На передний план</button>

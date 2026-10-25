@@ -86,7 +86,7 @@ test('a navigation marker panorama is stitched from photos with shooting tips an
   await page.goto('/projects/site/editor')
   const hall = await screen(page, HALL)
   await page.mouse.click(hall.x, hall.y)
-  await page.getByRole('button', { name: 'Собрать из фото', exact: true }).click()
+  await page.getByRole('button', { name: 'Создать панораму', exact: true }).click()
 
   const dialog = stitchDialog(page)
   await expect(dialog.getByRole('heading', { name: 'Собрать панораму: Зал' })).toBeVisible()
@@ -136,7 +136,7 @@ test('a stitching error keeps the photos and shows the server advice', async ({ 
   await page.goto('/projects/site/editor')
   const hall = await screen(page, HALL)
   await page.mouse.click(hall.x, hall.y)
-  await page.getByRole('button', { name: 'Собрать из фото', exact: true }).click()
+  await page.getByRole('button', { name: 'Создать панораму', exact: true }).click()
   const dialog = stitchDialog(page)
   await dialog.getByLabel('Добавить снимки', { exact: true }).setInputFiles(await photos(page, 2))
   await dialog.getByRole('button', { name: 'Собрать панораму', exact: true }).click()

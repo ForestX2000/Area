@@ -1053,6 +1053,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
           panoramas={points.filter((point) => panoramaIds.includes(point.id))}
           onSelectPanorama={openPanorama}
           onClose={() => setViewerOpen(false)}
+          editable
         />
       )}
     </div>

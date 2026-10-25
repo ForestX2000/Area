@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import DrawingPlan from '../components/DrawingPlan'
 import PanoramaViewer from '../components/PanoramaViewer'
+import RouteOverlay from '../components/route/RouteOverlay'
+import RoutePanel from '../components/route/RoutePanel'
+import { findRoute } from '../utils/routing'
+import { useRouteRequest } from '../utils/routeStore'
 import type { DrawingObject } from '../types/drawing'
 import type { MapPoint } from '../types/mapPoint'
 import { floorStorageId, getFloor, getFloors } from '../utils/floorStorage'
@@ -59,6 +63,8 @@ function ObjectViewer() {
   const [requestedId, setRequestedId] = useState<string | null>(null)
   const [viewerUrl, replaceViewerUrl] = useObjectUrl()
   const [error, setError] = useState('')
+  const [route, setRoute] = useRouteRequest(projectId ?? '')
+  const routeResult = route.from && route.to && project ? findRoute(getFloors(project), { from: route.from, to: route.to }) : null
 
   useEffect(() => {
     if (!project) return
@@ -169,7 +175,9 @@ function ObjectViewer() {
             <div className="relative mx-auto w-full overflow-hidden rounded-lg bg-page">
               {planUrl
                 ? <img src={planUrl} alt={`План: ${project.name}`} className="block h-auto w-full select-none" draggable={false} />
-                : <DrawingPlan objects={drawings} label={`План: ${project.name}`} onMarkerActivate={activateMarker} />}
+                : <DrawingPlan objects={drawings} label={`План: ${project.name}`} onMarkerActivate={activateMarker}>
+                  <RouteOverlay result={routeResult} floorId={floorId} />
+                </DrawingPlan>}
               {points.map((point, index) => (
                 <button key={point.id} type="button" aria-label={`Точка: ${point.title}`}
                   aria-pressed={selection?.kind === 'point' && selection.point.id === point.id}
@@ -217,6 +225,11 @@ function ObjectViewer() {
               <p className="text-sm text-muted">Выберите точку или метку на плане, чтобы увидеть описание и открыть панораму.</p>
             )}
           </section>
+
+          {floors.some((item) => (item.drawings ?? []).length > 0) && <div className="rounded-2xl border border-line bg-surface p-5">
+            <RoutePanel compact floors={floors} request={route} result={routeResult} currentFloorId={floorId} onChange={setRoute} onGoToFloor={selectFloor} />
+            {planUrl && routeResult && !('error' in routeResult) && <p className="mt-2 text-xs text-muted">Линия маршрута рисуется на чертеже; на загруженном изображении плана показана только длина.</p>}
+          </div>}
 
           <section aria-label="Панорамы этажа" className="rounded-2xl border border-line bg-surface p-5">
             <h2 className="mb-3 text-sm font-semibold text-ink">Панорамы 360°</h2>

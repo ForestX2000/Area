@@ -1,16 +1,23 @@
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import CanvasEditor from '../components/editor/CanvasEditor'
+import CanvasContextMenu, { type MenuItem } from '../components/editor/CanvasContextMenu'
 import EditorToolbar from '../components/editor/EditorToolbar'
+import EditorTutorial from '../components/editor/EditorTutorial'
+import { tutorialDone } from '../utils/tutorial'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
 import EditorNavigation from '../components/editor/EditorNavigation'
 import PanoramaViewer from '../components/PanoramaViewer'
 import PanoramaStitchDialog from '../components/PanoramaStitchDialog'
-import { addVertex, canAddVertex, canDeleteVertex, deleteVertex, objectLocalBounds, objectName, scaleDrawing } from '../components/editor/drawingGeometry'
-import type { DrawingObject, DrawingTool } from '../types/drawing'
+import RouteOverlay from '../components/route/RouteOverlay'
+import RoutePanel from '../components/route/RoutePanel'
+import { addVertex, canAddVertex, canDeleteVertex, createDrawing, deleteVertex, isStairs, objectLocalBounds, objectName, objectsBounds, PIXELS_PER_METRE, rotateDrawing, scaleDrawing } from '../components/editor/drawingGeometry'
+import type { DrawingObject, DrawingTool, Point } from '../types/drawing'
 import { getProjects } from '../utils/projectStorage'
-import { floorStorageId, getFloor, saveFloorDrawings } from '../utils/floorStorage'
+import { floorStorageId, floorUrl, getFloor, getFloors, saveFloorDrawings } from '../utils/floorStorage'
+import { findRoute, type RouteEndpoint } from '../utils/routing'
+import { useRouteRequest } from '../utils/routeStore'
 import { useProjectFloor } from '../utils/useProjects'
 import { deletePanorama, getPanorama, savePanorama } from '../utils/mapStorage'
 import { useObjectUrl } from '../utils/useObjectUrl'
@@ -45,13 +52,32 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
   const [viewerUrl, replaceViewerUrl] = useObjectUrl()
   const [panoramaError, setPanoramaError] = useState('')
   const [stitchOpen, setStitchOpen] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number; point: Point; objectId?: string } | null>(null)
+  const [menuOpens, setMenuOpens] = useState(0)
+  const [undoCount, setUndoCount] = useState(0)
+  const [tutorialRun, setTutorialRun] = useState(() => tutorialDone() ? 0 : 1)
+  const [clipboard, setClipboard] = useState<DrawingObject[]>([])
+  const hasClipboard = clipboard.length > 0
+  const [route, setRoute] = useRouteRequest(projectId ?? '')
 
   const project = projectId
     ? getProjects().find((p) => p.id === projectId)
     : undefined
+  const floors = project ? getFloors(project).map((floor) => floor.id === floorId ? { ...floor, drawings: objects } : floor) : []
 
   const selected = objects.find((o) => o.id === selectedId) ?? null
   const navigationPanoramas = objects.filter((object) => object.markerKind === 'navigation' && object.panoramaKey)
+
+  const routeResult = useMemo(() => {
+    if (!route.from || !route.to) return null
+    const current = getProjects().find((item) => item.id === projectId)
+    if (!current) return null
+    const live = getFloors(current).map((floor) => floor.id === floorId ? { ...floor, drawings: objects } : floor)
+    return findRoute(live, { from: route.from, to: route.to })
+  }, [route, objects, floorId, projectId])
+
+  const closeMenu = useCallback(() => setMenu(null), [])
+  const goToFloor = useCallback((id: string) => navigate(floorUrl(`/projects/${projectId}/editor`, id, true)), [navigate, projectId])
 
   useEffect(() => {
     if (!projectId) return
@@ -75,6 +101,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     })
     setSelectedIds([])
     setSelectedVertex(null)
+    setUndoCount((count) => count + 1)
   }, [])
 
   const handleRedo = useCallback(() => {
@@ -98,6 +125,43 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     setSelectedIds([])
     handleObjectsChange(objects.filter((object) => !selectedIds.includes(object.id)))
   }, [selectedIds, objects, handleObjectsChange, selectedVertex, tool, selected])
+
+  const copySelection = useCallback(() => {
+    const items = objects.filter((object) => selectedIds.includes(object.id))
+    if (items.length) setClipboard(structuredClone(items))
+    return items.length > 0
+  }, [objects, selectedIds])
+
+  const pasteObjects = useCallback((items: DrawingObject[], at?: Point) => {
+    if (!items.length) return
+    const box = objectsBounds(items)
+    const cell = gridSize * PIXELS_PER_METRE
+    const snap = (value: number) => snapToGrid ? Math.round(value / cell) * cell : value
+    const offset = at ? { x: snap(at.x - (box.left + box.right) / 2), y: snap(at.y - (box.top + box.bottom) / 2) } : { x: cell, y: cell }
+    // Панорама принадлежит исходной метке, копия получает свою позже.
+    const pasted = items.map((object) => ({ ...structuredClone(object), id: crypto.randomUUID(), panoramaKey: undefined,
+      points: object.points.map((point) => ({ x: point.x + offset.x, y: point.y + offset.y })) }))
+    handleObjectsChange([...objects, ...pasted])
+    if (!at) setClipboard(pasted)
+    setSelectedIds(pasted.map((object) => object.id))
+    setSelectedVertex(null)
+    setTool('select')
+  }, [objects, gridSize, snapToGrid, handleObjectsChange])
+
+  const reorderSelection = useCallback((front: boolean) => {
+    const chosen = objects.filter((object) => selectedIds.includes(object.id))
+    const rest = objects.filter((object) => !selectedIds.includes(object.id))
+    handleObjectsChange(front ? [...rest, ...chosen] : [...chosen, ...rest])
+  }, [objects, selectedIds, handleObjectsChange])
+
+  const rotateSelection = useCallback((degrees: number) => {
+    const chosen = objects.filter((object) => selectedIds.includes(object.id))
+    if (!chosen.length) return
+    const box = chosen.length === 1 ? objectLocalBounds(chosen[0]) : objectsBounds(chosen)
+    const center = { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 }
+    const rotated = new Map(chosen.map((object) => [object.id, rotateDrawing(object, center, degrees)]))
+    handleObjectsChange(objects.map((object) => rotated.get(object.id) ?? object))
+  }, [objects, selectedIds, handleObjectsChange])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -123,11 +187,19 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
       } else if (event.code === 'KeyY' || event.key.toLowerCase() === 'y') {
         event.preventDefault()
         handleRedo()
+      } else if (event.code === 'KeyC' || event.key.toLowerCase() === 'c') {
+        if (copySelection()) event.preventDefault()
+      } else if (event.code === 'KeyV' || event.key.toLowerCase() === 'v') {
+        event.preventDefault()
+        pasteObjects(clipboard)
+      } else if (event.code === 'KeyD' || event.key.toLowerCase() === 'd') {
+        event.preventDefault()
+        pasteObjects(objects.filter((object) => selectedIds.includes(object.id)))
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleUndo, handleRedo, handleDelete, selectedIds.length, objects, showServiceMarks])
+  }, [handleUndo, handleRedo, handleDelete, selectedIds, objects, showServiceMarks, copySelection, pasteObjects, clipboard])
 
   const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
     setSelectedIds(ids)
@@ -197,6 +269,10 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
   }
 
   function activateMarker(object: DrawingObject) {
+    if (isStairs(object)) {
+      if (object.targetFloorId && floors.some((floor) => floor.id === object.targetFloorId)) goToFloor(object.targetFloorId)
+      return
+    }
     if (object.markerKind !== 'navigation') return
     if (object.panoramaKey) openMarkerPanorama(object)
     else if (object.targetProjectId) navigate(`/projects/${object.targetProjectId}/map`)
@@ -230,6 +306,41 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     } catch {
       setPanoramaError('Не удалось удалить панораму.')
     }
+  }
+
+  function menuItems(current: NonNullable<typeof menu>): MenuItem[] {
+    const target = current.objectId ? objects.find((object) => object.id === current.objectId) : undefined
+    const endpoint: RouteEndpoint = target ? { floorId, objectId: target.id } : { floorId, point: current.point }
+    const routeItems: MenuItem[] = [
+      { label: 'Маршрут отсюда', onSelect: () => setRoute({ ...route, from: endpoint }) },
+      { label: 'Маршрут сюда', onSelect: () => setRoute({ ...route, to: endpoint }) },
+    ]
+    if (!target) return [
+      { label: 'Вставить сюда', shortcut: 'Ctrl+V', disabled: !hasClipboard, onSelect: () => pasteObjects(clipboard, current.point) },
+      { label: 'Выделить всё', shortcut: 'Ctrl+A', disabled: !objects.length, onSelect: () => { setSelectedIds(objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object) => object.id)); setTool('select') } },
+      { label: 'Поставить инфо-метку', onSelect: () => {
+        const marker = { ...createDrawing('marker-info', current.point, current.point, ''), id: crypto.randomUUID() }
+        handleObjectsChange([...objects, marker]); setSelectedIds([marker.id]); setTool('select')
+      } },
+      'separator', ...routeItems, 'separator',
+      { label: 'Отменить', shortcut: 'Ctrl+Z', disabled: !history.past.length, onSelect: handleUndo },
+    ]
+    const count = selectedIds.length
+    const floorTarget = isStairs(target) && target.targetFloorId ? floors.find((floor) => floor.id === target.targetFloorId) : undefined
+    return [
+      { label: 'Копировать', shortcut: 'Ctrl+C', onSelect: () => { copySelection() } },
+      { label: 'Вставить', shortcut: 'Ctrl+V', disabled: !hasClipboard, onSelect: () => pasteObjects(clipboard) },
+      { label: 'Дублировать', shortcut: 'Ctrl+D', onSelect: () => pasteObjects(objects.filter((object) => selectedIds.includes(object.id))) },
+      'separator',
+      { label: 'На передний план', onSelect: () => reorderSelection(true) },
+      { label: 'На задний план', onSelect: () => reorderSelection(false) },
+      { label: 'Повернуть на 90°', onSelect: () => rotateSelection(90) },
+      ...(count === 1 ? ['separator' as const, ...routeItems] : []),
+      ...(floorTarget ? [{ label: `Перейти на этаж ${floorTarget.name}`, onSelect: () => goToFloor(floorTarget.id) }] : []),
+      ...(target.markerKind === 'navigation' && target.panoramaKey ? [{ label: 'Открыть панораму', onSelect: () => openMarkerPanorama(target) }] : []),
+      'separator',
+      { label: count > 1 ? `Удалить (${count})` : 'Удалить', shortcut: 'Delete', danger: true, onSelect: handleDelete },
+    ]
   }
 
   if (!projectId || !project) {
@@ -271,7 +382,8 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
               if (!selected || selectedVertex === null || !canDeleteVertex(selected)) return
               handleObjectsChange(objects.map((object) => object.id === selected.id ? deleteVertex(object, selectedVertex) : object))
               setSelectedVertex(null)
-            }} />
+            }}
+            floors={floors.map((floor) => ({ id: floor.id, name: floor.name }))} currentFloorId={floorId} onGoToFloor={goToFloor} />
           <section aria-label="Список объектов" className="border-t border-line p-3">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Все объекты</h2>
             <ul className="space-y-1">{objects.filter((object) => object.markerKind !== 'service' || showServiceMarks).map((object, index) => <li key={object.id}>
@@ -290,7 +402,9 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
           <CanvasEditor objects={objects} onObjectsChange={handleObjectsChange} selectedIds={selectedIds} onSelect={handleSelect}
             tool={tool} gridSize={gridSize} snapToGrid={snapToGrid} zoom={zoom} onZoomChange={setZoom}
             selectedVertex={selectedVertex} onVertexSelect={setSelectedVertex} showServiceMarks={showServiceMarks}
-            onActivateMarker={activateMarker} />
+            onActivateMarker={activateMarker}
+            onContextMenu={({ clientX, clientY, point, objectId }) => { setMenu({ x: clientX, y: clientY, point, objectId }); setMenuOpens((count) => count + 1) }}
+            overlay={<RouteOverlay result={routeResult} floorId={floorId} zoom={zoom} />} />
         </div>
         <aside aria-label="Панель инструментов" className="order-2 overflow-y-auto border-r border-line md:order-1">
           <EditorToolbar
@@ -308,10 +422,15 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
             onRedo={handleRedo}
             showServiceMarks={showServiceMarks}
             onServiceToggle={() => { setShowServiceMarks((value) => !value); setSelectedIds([]); setSelectedVertex(null); setTool('select') }}
-          />
+            onStartTutorial={() => setTutorialRun((run) => run + 1)}
+          >
+            <RoutePanel floors={floors} request={route} result={routeResult} currentFloorId={floorId} onChange={setRoute} onGoToFloor={goToFloor} />
+          </EditorToolbar>
         </aside>
 
       </div>
+      {menu && <CanvasContextMenu x={menu.x} y={menu.y} items={menuItems(menu)} onClose={closeMenu} />}
+      {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
       {stitchOpen && selected && (
         <PanoramaStitchDialog
           title={selected.label || objectName(selected)}
@@ -335,6 +454,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
             if (object) openMarkerPanorama(object)
           }}
           onClose={() => setViewer(null)}
+          editable
         />
       )}
     </div>

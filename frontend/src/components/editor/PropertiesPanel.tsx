@@ -1,6 +1,6 @@
 
 import type { DrawingObject } from '../../types/drawing'
-import { canAddVertex, canDeleteVertex, objectLocalBounds, objectName, PIXELS_PER_METRE, vertices } from './drawingGeometry'
+import { canAddVertex, canDeleteVertex, isStairs, objectLocalBounds, objectName, PIXELS_PER_METRE, vertices } from './drawingGeometry'
 import { getProjects } from '../../utils/projectStorage'
 
 interface PropertiesPanelProps {
@@ -17,6 +17,9 @@ interface PropertiesPanelProps {
   onUploadPanorama?: (file: File) => void
   onDeletePanorama?: () => void
   onStitchPanorama?: () => void
+  floors?: { id: string; name: string }[]
+  currentFloorId?: string
+  onGoToFloor?: (floorId: string) => void
 }
 
 export default function PropertiesPanel({
@@ -26,6 +29,7 @@ export default function PropertiesPanel({
   onDelete,
   selectedVertex, onAddVertex, onDeleteVertex, onEditVertices,
   panoramaError, onOpenPanorama, onUploadPanorama, onDeletePanorama, onStitchPanorama,
+  floors = [], currentFloorId, onGoToFloor,
 }: PropertiesPanelProps) {
   if (selectionCount > 1) {
     return (
@@ -131,6 +135,25 @@ export default function PropertiesPanel({
             className="w-full accent-brand h-1.5 bg-line rounded-lg appearance-none cursor-pointer"
           />
         </div></>}
+
+        {isStairs(selected) && <div className="grid gap-2 rounded-xl border border-line bg-surface-muted p-3">
+          <label className="grid gap-1 text-xs font-medium text-body">Ведёт на этаж
+            <select aria-label="Лестница ведёт на этаж" value={selected.targetFloorId ?? ''} onChange={(event) => onUpdate({ targetFloorId: event.target.value || undefined })}
+              className="w-full rounded-lg border border-line bg-surface p-2 text-sm">
+              <option value="">Не выбрано</option>
+              {floors.filter((floor) => floor.id !== currentFloorId).map((floor) => <option key={floor.id} value={floor.id}>Этаж {floor.name}</option>)}
+            </select>
+          </label>
+          {floors.length < 2 && <p className="text-xs leading-5 text-muted">Добавь второй этаж кнопкой «Этаж» вверху, чтобы связать его лестницей.</p>}
+          {selected.targetFloorId && floors.some((floor) => floor.id === selected.targetFloorId) && <button type="button" onClick={() => onGoToFloor?.(selected.targetFloorId!)}
+            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm hover:bg-brand-soft">Перейти на этаж {floors.find((floor) => floor.id === selected.targetFloorId)?.name}</button>}
+          <p className="text-xs leading-5 text-muted">Маршруты между этажами проходят через лестницы. Двойной клик по лестнице открывает связанный этаж.</p>
+        </div>}
+
+        {['rectangle', 'ellipse', 'polygon'].includes(selected.type) && !isStairs(selected) && <label className="flex items-start gap-2 text-xs leading-5 text-body">
+          <input type="checkbox" checked={Boolean(selected.passable)} onChange={(event) => onUpdate({ passable: event.target.checked || undefined })} className="mt-1" />
+          <span>Проходимая зона<span className="block text-muted">Коридор или холл: маршрут может идти через фигуру.</span></span>
+        </label>}
       </div>
 
       <div className="mt-auto">

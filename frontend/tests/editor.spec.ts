@@ -166,6 +166,7 @@ test('pointer capture finishes drawings when released outside the canvas', async
   await page.mouse.up()
   await expect(shapes(page)).toHaveCount(1)
   await expect(canvas(page).locator('[data-preview]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Прямоугольник', exact: true }).click()
   await drag(page, { x: 100, y: 300 }, { x: 200, y: 400 })
   await expect(shapes(page)).toHaveCount(2)
 })
@@ -195,6 +196,7 @@ test('Ctrl + wheel zooms grid and objects around the cursor without resizing the
   expect(await page.evaluate(() => window.visualViewport!.scale)).toBe(1)
   expect(warnings).toEqual([])
   // Drawing coordinates still follow the displayed grid after zooming.
+  await page.getByRole('button', { name: 'Прямоугольник', exact: true }).click()
   await drag(page, { x: 250, y: 250 }, { x: 350, y: 300 })
   expect((await drawings(page))[1].points).toEqual([{ x: 250, y: 250 }, { x: 350, y: 300 }])
 })
@@ -275,7 +277,7 @@ test('Shift snaps to other objects; disabling grid snap allows free coordinates'
 test('tools and canvas remain usable on a narrow screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Прямоугольник', exact: true }).click()
-  await canvas(page).scrollIntoViewIfNeeded()
+  await page.evaluate(() => window.scrollTo(0, 0))
   const bounds = (await canvas(page).boundingBox())!
   expect(bounds.height).toBeGreaterThanOrEqual(384)
   expect(bounds.width).toBeGreaterThan(300)

@@ -1,0 +1,6 @@
+{
+  "cookies": [],
+  "origins": [
+    { "origin": "http://127.0.0.1:5173", "localStorage": [{ "name": "space-map-editor-tutorial", "value": "done" }] }
+  ]
+}

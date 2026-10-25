@@ -1,7 +1,7 @@
 
 export type ShapeType = 'line' | 'rectangle' | 'dimension' | 'ellipse' | 'polygon' | 'polyline'
 export type MarkerKind = 'info' | 'navigation' | 'status' | 'service'
-export type DrawingTool = 'select' | 'vertices' | ShapeType | 'triangle' | 'diamond' | 'pentagon' | 'hexagon' | 'star' | 'arrow' | `marker-${MarkerKind}`
+export type DrawingTool = 'select' | 'vertices' | ShapeType | 'triangle' | 'diamond' | 'pentagon' | 'hexagon' | 'star' | 'arrow' | 'stairs' | `marker-${MarkerKind}`
 
 export interface Point {
   x: number
@@ -15,6 +15,10 @@ export interface DrawingObject {
   markerKind?: MarkerKind
   description?: string
   targetProjectId?: string
+  /** Лестница: этаж, на который она ведёт. */
+  targetFloorId?: string
+  /** Замкнутая фигура, через которую маршрут может проходить (коридор, холл). */
+  passable?: boolean
   panoramaKey?: string
   status?: 'ready' | 'progress' | 'blocked'
   points: Point[]

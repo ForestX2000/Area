@@ -120,3 +120,25 @@ input[type='range'] {
 }
 
 
+
+/* Маршрут на плане: пунктир «бежит» от начала к концу. */
+@keyframes route-flow { to { stroke-dashoffset: -32; } }
+.route-flow { animation: route-flow 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .route-flow { animation: none; } }
+
+/* Метки внутри панорамы Pannellum. */
+.area-hotspot { width: 28px; height: 28px; cursor: pointer; }
+.area-hotspot-icon {
+  display: flex; width: 28px; height: 28px; align-items: center; justify-content: center;
+  border: 2px solid #fff; border-radius: 9999px; background: #DD2538; color: #fff;
+  font: 700 14px/1 system-ui, sans-serif; box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+.area-hotspot-scene .area-hotspot-icon { background: #2563eb; }
+.area-hotspot-label {
+  position: absolute; top: 50%; left: 34px; max-width: 200px; transform: translateY(-50%);
+  overflow: hidden; border-radius: 6px; background: rgb(26 27 27 / 0.85); padding: 2px 8px;
+  color: #fff; font: 12px/1.5 system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap;
+}
+.area-hotspot.is-editing .area-hotspot-icon { outline: 3px solid #fff; outline-offset: 2px; }
+.area-hotspot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 9999px; }
+.area-placing .pnlm-ui, .area-placing .pnlm-dragfix { cursor: crosshair !important; }

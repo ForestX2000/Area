@@ -191,6 +191,8 @@ test('Escape and Ctrl+Z cancel the current resize or drawing without undoing a c
   await page.keyboard.press('Escape')
   await page.mouse.up()
   expect((await stored(page))[0].width).toBe(200)
+  // После создания фигуры редактор переключается на «Выделение».
+  await page.getByRole('button', { name: 'Прямоугольник', exact: true }).click()
   const a = await pointOnScreen(page, { x: 400, y: 400 })
   const b = await pointOnScreen(page, { x: 500, y: 500 })
   await page.mouse.move(a.x, a.y)
@@ -280,6 +282,7 @@ test('redo does not interrupt text input or an active drawing gesture', async ({
   await zoomInput(page).focus()
   await page.keyboard.press('Control+y')
   await expect(shapes(page)).toHaveCount(0)
+  await page.getByRole('button', { name: 'Прямоугольник', exact: true }).click()
   const a = await pointOnScreen(page, { x: 400, y: 400 })
   const b = await pointOnScreen(page, { x: 500, y: 500 })
   await page.mouse.move(a.x, a.y)

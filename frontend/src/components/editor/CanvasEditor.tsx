@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import type { PointerEvent } from 'react'
+import type { PointerEvent, ReactNode } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
-import { addVertex, canAddVertex, createDrawing, drawingPoints, hitObject, intersectsSelection, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, objectLocalBounds, objectsBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, rotateDrawing, vertices } from './drawingGeometry'
+import { addVertex, canAddVertex, createDrawing, drawingPoints, hitObject, intersectsSelection, isStairs, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, objectLocalBounds, objectsBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, rotateDrawing, vertices } from './drawingGeometry'
 import DrawingShape from './DrawingShape'
 
 interface CanvasEditorProps {
@@ -18,6 +18,8 @@ interface CanvasEditorProps {
   onVertexSelect?: (index: number | null) => void
   showServiceMarks?: boolean
   onActivateMarker?: (object: DrawingObject) => void
+  onContextMenu?: (menu: { clientX: number; clientY: number; point: Point; objectId?: string }) => void
+  overlay?: ReactNode
 }
 
 type Gesture =
@@ -45,7 +47,7 @@ interface ClickPoint {
 const formatMetres = (value: number) => (value / PIXELS_PER_METRE).toFixed(2)
 
 export default function CanvasEditor({ objects, onObjectsChange, selectedIds, onSelect,
-  tool, gridSize, snapToGrid, zoom, onZoomChange, selectedVertex, onVertexSelect, showServiceMarks = false, onActivateMarker }: CanvasEditorProps) {
+  tool, gridSize, snapToGrid, zoom, onZoomChange, selectedVertex, onVertexSelect, showServiceMarks = false, onActivateMarker, onContextMenu, overlay }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const contentRef = useRef<SVGGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
@@ -136,7 +138,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     if (shiftKey) {
       for (const object of visibleObjects) {
         if (excludedIds.includes(object.id)) continue
-        const corners = object.type === 'marker' ? object.points : object.type === 'ellipse' ? resizeHandles(object) : vertices(object)
+        const corners = object.type === 'marker' ? object.points : object.type === 'ellipse' || isStairs(object) ? resizeHandles(object) : vertices(object)
         for (const corner of corners) {
           const d = Math.hypot(corner.x - point.x, corner.y - point.y)
           if (d < distance) { nearest = corner; distance = d }
@@ -366,7 +368,8 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       } else if (gesture.kind === 'draw' && valid) {
         const created = { ...object, id: crypto.randomUUID() }
         onObjectsChange([...objects, created])
-        onSelect([created.id])
+        // Как в Figma: после создания возвращаемся к выделению. Линейка остаётся — замеры обычно идут подряд.
+        onSelect([created.id], gesture.tool !== 'dimension')
       }
     }
     clearGesture()
@@ -420,8 +423,15 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
           const targetId = (event.target as Element).closest('[data-object-id]')?.getAttribute('data-object-id')
           const ruler = !gesture && tool !== 'polygon' ? visibleObjects.find((object) =>
             object.type === 'dimension' && object.id === (targetId ?? (tool === 'dimension' ? selectedId : null))) : undefined
-          if (tool !== 'polygon' && !drawingRuler && !ruler) return
           event.preventDefault()
+          if (tool !== 'polygon' && !drawingRuler && !ruler) {
+            if (gesture) return
+            const point = svgPoint(event as unknown as PointerEvent<SVGSVGElement>)
+            const object = findObject(point)
+            if (object && !selectedIds.includes(object.id)) onSelect([object.id], tool !== 'vertices')
+            onContextMenu?.({ clientX: event.clientX, clientY: event.clientY, point, objectId: object?.id })
+            return
+          }
           clearGesture(true)
           if (tool === 'polygon') setPolygon({ tool, points: [], cursor: null })
           if (ruler) {
@@ -439,7 +449,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             const added = addVertex(object, point)
             onObjectsChange(objects.map((item) => item.id === object.id ? added.object : item))
             onVertexSelect?.(added.index)
-          } else if (object?.type === 'marker') onActivateMarker?.(object)
+          } else if (object && (object.type === 'marker' || isStairs(object))) onActivateMarker?.(object)
         }}
         onAuxClick={(event) => { if (event.button === 1) event.preventDefault() }}
         onKeyDown={(event) => {
@@ -488,6 +498,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         <rect width="100%" height="100%" fill={`url(#${patternId}-major)`} />
         <g ref={contentRef} data-canvas-content transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
           {visibleObjects.map((object) => renderObject(draftsById.get(object.id) ?? object))}
+          {overlay}
           {drafts.filter((draft) => draft.id === 'preview').map((draft) => renderObject(draft, true))}
           {selectedObjects.length > 0 && tool !== 'vertices' && tool !== 'polygon' && !selectionBox && !drafts.some((draft) => draft.id === 'preview') && <g data-rotation-control
             transform={`rotate(${rotationFrame.rotation} ${rotationFrame.center.x} ${rotationFrame.center.y})`}>

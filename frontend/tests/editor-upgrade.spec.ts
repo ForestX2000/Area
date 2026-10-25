@@ -371,6 +371,8 @@ test('right click cancels the polygon draft without saving, opens no context men
   expect(await drawings(page)).toEqual(before)
   for (const point of [{ x: 100, y: 300 }, { x: 200, y: 300 }, { x: 200, y: 400 }, { x: 100, y: 300 }]) await polygonPoint(page, point)
   expect((await drawings(page))[1].points).toEqual([{ x: 100, y: 300 }, { x: 200, y: 300 }, { x: 200, y: 400 }])
+  // Без черновика правая кнопка открывает меню действий редактора вместо меню браузера.
   const prevented = await canvas(page).evaluate((node) => !node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })))
-  expect(prevented).toBe(false)
+  expect(prevented).toBe(true)
+  await expect(page.getByRole('menu', { name: 'Действия на холсте' })).toBeVisible()
 })

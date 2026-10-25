@@ -14,7 +14,6 @@ interface PropertiesPanelProps {
   onEditVertices?: () => void
   panoramaError?: string
   onOpenPanorama?: () => void
-  onUploadPanorama?: (file: File) => void
   onDeletePanorama?: () => void
   onStitchPanorama?: () => void
   floors?: { id: string; name: string }[]
@@ -28,7 +27,7 @@ export default function PropertiesPanel({
   onUpdate,
   onDelete,
   selectedVertex, onAddVertex, onDeleteVertex, onEditVertices,
-  panoramaError, onOpenPanorama, onUploadPanorama, onDeletePanorama, onStitchPanorama,
+  panoramaError, onOpenPanorama, onDeletePanorama, onStitchPanorama,
   floors = [], currentFloorId, onGoToFloor,
 }: PropertiesPanelProps) {
   if (selectionCount > 1) {
@@ -167,17 +166,8 @@ export default function PropertiesPanel({
           {selected.markerKind === 'navigation' && <div className="grid gap-2">
             <p className="text-xs text-muted">Панорама: {selected.panoramaKey ? 'загружена' : 'не добавлена'}</p>
             {selected.panoramaKey && <button type="button" onClick={onOpenPanorama} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-surface-muted">Открыть панораму</button>}
-            <label className="cursor-pointer rounded-lg border border-line px-3 py-2 text-center text-sm hover:bg-surface-muted focus-within:ring-2 focus-within:ring-brand">
-              {selected.panoramaKey ? 'Заменить панораму' : 'Создать панораму'}
-              <input type="file" accept="image/*" aria-label={selected.panoramaKey ? 'Заменить панораму' : 'Создать панораму'} className="sr-only"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (file) onUploadPanorama?.(file)
-                }} />
-            </label>
             <button type="button" onClick={onStitchPanorama} className="rounded-lg border border-brand-border px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft">
-              {selected.panoramaKey ? 'Пересобрать из фото' : 'Собрать из фото'}
+              {selected.panoramaKey ? 'Пересобрать из фото' : 'Создать панораму'}
             </button>
             {selected.panoramaKey && <button type="button" onClick={onDeletePanorama} className="rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-hover hover:bg-brand-soft">Удалить панораму</button>}
             {panoramaError && <p role="alert" className="text-xs text-brand-hover">{panoramaError}</p>}

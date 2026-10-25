@@ -27,8 +27,7 @@ async function createFromProjects(page: Page, name: string) {
   await page.goto('/')
   await seedWorkspace(page, name)
   await page.reload()
-  await page.getByRole('article', { name: `Папка: ${name}`, exact: true }).getByRole('button', { name: 'Открыть папку' }).click()
-  await page.getByRole('link', { name: 'Открыть как доску' }).click()
+  await page.getByRole('article').filter({ has: page.getByRole('heading', { name, exact: true }) }).getByRole('link', { name: 'Открыть Workspace' }).click()
 }
 
 async function positions(page: Page) {

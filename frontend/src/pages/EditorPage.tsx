@@ -398,7 +398,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
           <div className="editor-panel-heading"><h2>Свойства и объекты</h2><button type="button" aria-label="Закрыть свойства" onClick={() => setMobilePanel(null)}>×</button></div>
           <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
             panoramaError={panoramaError} onOpenPanorama={() => { if (selected) openMarkerPanorama(selected) }}
-            onUploadPanorama={handleMarkerPanoramaUpload} onDeletePanorama={handleMarkerPanoramaDelete}
+            onDeletePanorama={handleMarkerPanoramaDelete}
             onStitchPanorama={() => setStitchOpen(true)}
             selectedVertex={selectedVertex} onEditVertices={() => changeTool('vertices')}
             onAddVertex={() => {

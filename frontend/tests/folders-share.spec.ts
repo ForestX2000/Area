@@ -24,7 +24,7 @@ test('Workspace is created from the top bar and holds maps added inside it', asy
   await page.goto('/')
   const filters = page.getByRole('navigation', { name: 'Фильтр проектов' })
   await filters.getByRole('button', { name: 'Workspace', exact: true }).click()
-  await expect(page.getByText('Нету Workspace')).toBeVisible()
+  await expect(page.getByText('Нет Workspace. Создайте его кнопкой «+ Workspace» вверху.')).toBeVisible()
 
   await page.getByRole('button', { name: '+ Workspace', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Создание Workspace' })).toBeVisible()
@@ -81,7 +81,6 @@ test.describe('sharing', () => {
     await page.goto('/projects/expo/editor')
     await page.getByRole('button', { name: 'Поделиться' }).click()
     const dialog = page.getByRole('dialog', { name: 'Выставочный центр' })
-    await dialog.getByRole('button', { name: 'Создать ссылку' }).click()
     await expect(dialog.getByLabel('Ссылка для просмотра')).toHaveValue(/\/share\/expo-share-1$/)
     expect(uploaded).toMatchObject({ version: 1, name: 'Выставочный центр', floors: [{ id: 'default', drawings: [{ label: 'Главный зал' }] }] })
   })
@@ -98,6 +97,41 @@ test.describe('sharing', () => {
     await page.getByRole('button', { name: 'Метка: Касса' }).click()
     await expect(page.getByRole('region', { name: 'Выбранный объект' })).toContainText('Работает до 20:00')
     await expect(page.getByRole('application', { name: 'Холст чертежа' })).toHaveCount(0)
+  })
+
+  test('public viewing does not initialize the account session', async ({ page }) => {
+    await page.addInitScript(() => {
+      const getItem = Storage.prototype.getItem
+      Storage.prototype.getItem = function (key) {
+        if (key === 'space-map-demo-user' || key === 'space-map-accounts') throw new Error('Account storage is unavailable')
+        return getItem.call(this, key)
+      }
+    })
+    await page.route('**/api/shares/guest-share-1', (route) =>
+      route.fulfill({ contentType: 'application/json', body: JSON.stringify({ id: 'guest-share-1', snapshot, files: [] }) }))
+    await page.goto('/share/guest-share-1')
+    await expect(page.getByRole('heading', { name: 'Выставочный центр', level: 1 })).toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Выставочный центр', level: 1 })).toBeVisible()
+    await expect(page).toHaveURL(/\/share\/guest-share-1$/)
+    await expect(page.getByRole('button', { name: 'Войти' })).toHaveCount(0)
+  })
+
+  test('a failed share can be retried without closing the dialog', async ({ page }) => {
+    await seed(page, [{ id: 'retry-share', name: 'Повторная отправка', description: '', createdAt: '2026-10-25' }])
+    let attempts = 0
+    await page.route('**/api/shares', async (route) => {
+      attempts += 1
+      await route.fulfill({ status: attempts === 1 ? 503 : 201, contentType: 'application/json',
+        body: JSON.stringify(attempts === 1 ? { detail: 'Сервис недоступен' } : { id: 'retried-share-1' }) })
+    })
+    await page.goto('/projects/retry-share/editor')
+    await page.getByRole('button', { name: 'Поделиться' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Повторная отправка' })
+    await expect(dialog.getByRole('alert')).toContainText('Сервис недоступен')
+    await dialog.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(dialog.getByLabel('Ссылка для просмотра')).toHaveValue(/\/share\/retried-share-1$/)
+    expect(attempts).toBe(2)
   })
 
   test('an unknown link explains the problem instead of asking to log in', async ({ page }) => {

@@ -291,7 +291,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }
     await page.setViewportSize(viewport)
     await page.evaluate(() => localStorage.removeItem('space-map-editor-tutorial'))
     await page.reload()
-    const welcome = page.getByRole('dialog', { name: 'Добро пожаловать в редактор' })
+    const welcome = page.getByRole('dialog', { name: 'Обучение редактору' })
     await expect(welcome).toBeVisible()
     await expect.poll(async () => {
       const box = (await welcome.boundingBox())!
@@ -301,7 +301,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }
     expect(box.width).toBeLessThanOrEqual(288)
     expect(box.height).toBeLessThanOrEqual(240)
     await welcome.getByRole('button', { name: 'Начать', exact: true }).tap()
-    const hint = page.getByRole('dialog', { name: 'Выбери инструмент' })
+    const hint = page.getByRole('dialog', { name: 'Выбор инструмента' })
     await expect(hint).toBeVisible()
     const expand = hint.getByRole('button', { name: 'Развернуть подсказку' })
     if (await expand.isVisible()) await expand.tap()
@@ -318,7 +318,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }
     const tools = (await page.getByRole('complementary', { name: 'Панель инструментов', exact: true }).boundingBox())!
     expect(hintBox.y + hintBox.height).toBeLessThanOrEqual(tools.y)
     await page.getByRole('button', { name: 'Прямоугольник', exact: true }).tap()
-    await expect(page.getByRole('dialog', { name: 'Нарисуй комнату' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Создание комнаты' })).toBeVisible()
     await page.screenshot({ path: `test-results/mobile-tutorial-${viewport.width}.png` })
   })
 }

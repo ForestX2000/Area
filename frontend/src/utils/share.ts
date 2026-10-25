@@ -69,7 +69,7 @@ export async function createShare(project: Project): Promise<string> {
   try {
     response = await fetch(`${API_URL}/shares`, { method: 'POST', body: form })
   } catch {
-    throw new ShareError('Сервер недоступен. Ссылку можно создать, когда запущен backend.')
+    throw new ShareError('Сервер недоступен. Повторите попытку позже.')
   }
   if (!response.ok) {
     const detail = await response.json().then((body) => body?.detail).catch(() => '')
@@ -82,7 +82,7 @@ export async function createShare(project: Project): Promise<string> {
 export async function loadShare(shareId: string): Promise<SharedProject> {
   let response: Response
   try {
-    response = await fetch(`${API_URL}/shares/${encodeURIComponent(shareId)}`)
+    response = await fetch(`${API_URL}/shares/${encodeURIComponent(shareId)}`, { credentials: 'omit' })
   } catch {
     throw new ShareError('Сервер недоступен. Попробуйте открыть ссылку позже.')
   }

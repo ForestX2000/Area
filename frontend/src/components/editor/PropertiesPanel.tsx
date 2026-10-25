@@ -143,7 +143,7 @@ export default function PropertiesPanel({
               {floors.filter((floor) => floor.id !== currentFloorId).map((floor) => <option key={floor.id} value={floor.id}>Этаж {floor.name}</option>)}
             </select>
           </label>
-          {floors.length < 2 && <p className="text-xs leading-5 text-muted">Добавь второй этаж кнопкой «Этаж» вверху, чтобы связать его лестницей.</p>}
+          {floors.length < 2 && <p className="text-xs leading-5 text-muted">Для перехода по лестнице добавьте второй этаж через меню «Этаж».</p>}
           {selected.targetFloorId && floors.some((floor) => floor.id === selected.targetFloorId) && <button type="button" onClick={() => onGoToFloor?.(selected.targetFloorId!)}
             className="rounded-lg border border-line bg-surface px-3 py-2 text-sm hover:bg-brand-soft">Перейти на этаж {floors.find((floor) => floor.id === selected.targetFloorId)?.name}</button>}
           <p className="text-xs leading-5 text-muted">Маршруты между этажами проходят через лестницы. Двойной клик по лестнице открывает связанный этаж.</p>

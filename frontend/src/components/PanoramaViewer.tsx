@@ -263,7 +263,7 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
                   {targets.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
                 </select>
               </label>
-            ) : <p className="text-xs leading-5 text-muted">Добавь ещё одну панораму на этом этаже, чтобы сделать переход.</p>}
+            ) : <p className="text-xs leading-5 text-muted">Для перехода нужна другая панорама на этом этаже.</p>}
             <div className="flex flex-wrap gap-2">
               {editing.kind === 'scene' && editing.targetId && targets.some((item) => item.id === editing.targetId) && (
                 <button type="button" onClick={() => onSelectPanorama(editing.targetId!)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-brand-soft">Перейти</button>

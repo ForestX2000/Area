@@ -158,7 +158,7 @@ test('the editor also allows uploading an image plan before drawing anything', a
   await expect(page).toHaveURL('/projects/empty/editor')
   await page.getByRole('link', { name: '2D-карта и панорамы' }).click()
   await expect(page).toHaveURL('/projects/empty/map?mode=2d')
-  await expect(page.getByRole('heading', { name: 'Начни с плана помещения' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'План не добавлен' })).toBeVisible()
   const image = await page.evaluate(panoramaImage)
   await page.locator('input[type=file]').first().setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: Buffer.from(image, 'base64') })
   await expect(plan(page)).toBeVisible()

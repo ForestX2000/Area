@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import type { WorkspaceCollection } from '../src/types/workspace'
 
-const surface = (page: Page) => page.getByRole('application', { name: 'Холст 2D Workspace' })
+const surface = (page: Page) => page.getByRole('application', { name: 'Холст Workspace' })
 const node = (page: Page, id: string) => surface(page).locator(`[data-project-id="${id}"]`)
 const groups = (page: Page) => surface(page).locator('[data-workspace-group]')
 const choose = (page: Page, name: string) => page.getByRole('checkbox', { name: `Выбрать карту: ${name}`, exact: true })
@@ -317,10 +317,10 @@ test('empty projects, malformed layouts and storage errors keep navigation usabl
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Пока нет Workspace' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нет Workspace' })).toBeVisible()
   await createFromProjects(page, 'Пустой Workspace')
-  await expect(surface(page).getByText('Добавьте карты в Workspace', { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Создать первый проект' })).toBeVisible()
+  await expect(surface(page).getByText('Добавьте карты из списка «Все карты».', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Создать проект' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('workspace-mobile.png'), fullPage: true })
   await page.evaluate(() => {

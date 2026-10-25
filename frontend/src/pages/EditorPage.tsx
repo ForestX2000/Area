@@ -381,6 +381,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
       if (event.key === 'Escape' && mobilePanel) { setMobilePanel(null); event.stopPropagation() }
     }}>
       <EditorNavigation projectId={projectId} />
+      {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
       <div className="editor-workspace relative grid min-h-0 overflow-hidden border border-line lg:h-[calc(100dvh-12rem)] lg:min-h-[38rem] lg:grid-cols-[240px_minmax(0,1fr)_240px] lg:rounded-b-xl">
         <aside id="editor-properties" aria-label="Свойства и объекты" className={`editor-panel editor-properties order-3 overflow-y-auto border-l border-line bg-surface ${mobilePanel === 'properties' ? 'is-open' : ''}`}>
           <div className="editor-panel-heading"><h2>Свойства и объекты</h2><button type="button" aria-label="Закрыть свойства" onClick={() => setMobilePanel(null)}>×</button></div>
@@ -485,7 +486,6 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
         <button type="button" aria-label="Открыть действия" aria-expanded={mobilePanel === 'actions'} aria-controls={mobilePanel === 'actions' ? 'editor-actions' : undefined} onClick={() => { setMobilePanel((panel) => panel === 'actions' ? null : 'actions'); setMenuOpens((count) => count + 1) }}><span aria-hidden="true">⋯</span><span>Действия</span></button>
       </nav>
       {menu && <CanvasContextMenu x={menu.x} y={menu.y} items={menuItems(menu)} onClose={closeMenu} />}
-      {tutorialRun > 0 && <EditorTutorial key={tutorialRun} context={{ tool, objects, menuOpens, undoCount }} onClose={() => setTutorialRun(0)} />}
       {stitchOpen && selected && (
         <PanoramaStitchDialog
           title={selected.label || objectName(selected)}

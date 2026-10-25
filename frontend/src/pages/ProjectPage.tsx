@@ -57,7 +57,7 @@ export default function ProjectPage() {
     event.preventDefault()
 
     if (!project || !name.trim()) {
-      setError('Введи название проекта.')
+      setError('Введите название проекта.')
       return
     }
 
@@ -77,7 +77,7 @@ export default function ProjectPage() {
       setEditingField(null)
       setError('')
     } catch {
-      setError('Не удалось сохранить изменения. Попробуй ещё раз.')
+      setError('Не удалось сохранить изменения. Повторите попытку.')
     }
   }
 
@@ -125,7 +125,7 @@ export default function ProjectPage() {
 
         <div className="mt-3 flex items-start gap-2">
           <p className="min-w-0 whitespace-pre-line break-words text-muted">
-            {project.description || 'Описание пока не добавлено.'}
+            {project.description || 'Нет описания'}
           </p>
           <EditButton field="description" onClick={() => startEditing('description')} />
         </div>

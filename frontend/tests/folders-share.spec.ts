@@ -24,7 +24,7 @@ test('Workspace works as project folders: create a folder, drop a map into it, o
   await page.goto('/')
   const filters = page.getByRole('navigation', { name: 'Фильтр проектов' })
   await filters.getByRole('button', { name: 'Workspace', exact: true }).click()
-  await expect(page.getByText('Нету папок проектов')).toBeVisible()
+  await expect(page.getByText('Нет папок проектов')).toBeVisible()
 
   await page.getByRole('button', { name: 'Создать проект' }).first().click()
   await expect(page.getByRole('heading', { name: 'Создание папки' })).toBeVisible()

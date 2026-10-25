@@ -91,7 +91,7 @@ test('cards show their actual photos, plans or drawings and skip unreadable phot
   await expect(drawing.locator('rect')).toHaveAttribute('height', '150')
   await expect(drawing.locator('line')).toHaveAttribute('x2', '100')
   const empty = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Новый проект', exact: true }) })
-  await expect(empty.getByText('Добавьте план, панораму или чертёж')).toBeVisible()
+  await expect(empty.getByText('Нет плана')).toBeVisible()
   await expect(empty.getByRole('img')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('project-previews.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
@@ -123,7 +123,7 @@ test('removing the plan removes the obsolete cover', async ({ page }) => {
   await expect(page.getByRole('img', { name: 'План помещения' })).toHaveCount(0)
   await home(page)
   const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'План', exact: true }) })
-  await expect(card.getByText('Добавьте план, панораму или чертёж')).toBeVisible()
+  await expect(card.getByText('Нет плана')).toBeVisible()
   await expect(card.getByRole('img')).toHaveCount(0)
 })
 

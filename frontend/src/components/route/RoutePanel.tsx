@@ -52,7 +52,7 @@ export default function RoutePanel({ floors, request, result, currentFloorId, on
       onClick={() => onChange({ from: request.to, to: request.from })}
       className="mx-auto block rounded-md px-2 text-sm text-muted hover:bg-surface-muted hover:text-brand disabled:opacity-40">⇅</button>
     {field('to', 'Куда')}
-    {!options.length && !request.from && <p className="text-xs leading-5 text-muted">Подпиши помещения или поставь метки — их можно выбрать как начало и конец. Также подойдёт ПКМ по плану → «Маршрут отсюда».</p>}
+    {!options.length && !request.from && <p className="text-xs leading-5 text-muted">Для выбора точек маршрута задайте названия помещениям или добавьте метки. Также точки можно выбрать в меню действий на плане.</p>}
     {result && ('error' in result
       ? <p role="alert" className="rounded-lg bg-brand-soft p-2 text-xs leading-5 text-brand-strong">{result.error}</p>
       : <div role="status" aria-label="Результат маршрута" className="rounded-lg border border-line bg-surface-muted p-2 text-xs">

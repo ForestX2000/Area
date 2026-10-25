@@ -274,7 +274,7 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
         </div>
       </div>
       <div className="grid md:grid-cols-[minmax(0,1fr)_260px]">
-        <div ref={surfaceRef} role="application" aria-label="Холст 2D Workspace" tabIndex={0}
+        <div ref={surfaceRef} role="application" aria-label="Холст Workspace" tabIndex={0}
           data-zoom={workspace.view.zoom} data-pan-x={workspace.view.x} data-pan-y={workspace.view.y}
           onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}
           onPointerCancel={cancel} onLostPointerCapture={() => { if (gestureRef.current) cancel() }}
@@ -321,12 +321,12 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
               style={{ left: frame.x, top: frame.y, width: frame.width, height: frame.height }} />}
           </div>
           {nodes.length === 0 && <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6 text-center">
-            <div><p className="text-lg font-semibold text-ink">Добавьте карты в Workspace</p><p className="mt-2 text-sm text-muted">Выберите карты в общем списке карт.</p></div>
+            <p className="text-lg font-semibold text-ink">Добавьте карты из списка «Все карты».</p>
           </div>}
         </div>
         <aside className="max-h-[65dvh] overflow-y-auto border-t border-line bg-surface p-4 md:max-h-[max(420px,calc(100dvh-24rem))] md:border-t-0 md:border-l">
           <p role="status" className="text-sm font-semibold text-ink">Выделено карт: {selected.length}</p>
-          <p className="mt-2 text-xs leading-5 text-muted">Shift + клик или рамка на свободном месте — выбор нескольких карт. Объединённые карты перемещаются вместе.</p>
+          <p className="mt-2 text-xs leading-5 text-muted">Для выбора нескольких карт, используйте выделение области или сочетание Shift + клик.</p>
           {singleGroup && <label key={singleGroup.id + singleGroup.name} className="mt-4 grid gap-1 text-xs text-muted">Название контейнера
             <input aria-label="Название контейнера" defaultValue={singleGroup.name} maxLength={120}
               onBlur={(event) => {
@@ -342,7 +342,7 @@ export default function WorkspaceBoard({ workspace, projects, onChange }: {
           <div className="mt-5 border-t border-line pt-4">
             <h2 className="text-sm font-semibold text-ink">Все карты · {projects.length}</h2>
             <button type="button" disabled={workspace.nodes.length === projects.length} onClick={() => add(projects.map((project) => project.id))} className={`${buttonClass} my-3 w-full`}>Добавить все карты</button>
-            {projects.length === 0 && <Link to="/" className="text-sm text-brand">Создать первый проект →</Link>}
+            {projects.length === 0 && <Link to="/" className="text-sm text-brand">Создать проект →</Link>}
             <ul className="space-y-2">
               {projects.map((project) => {
                 const node = workspace.nodes.find((node) => node.projectId === project.id)

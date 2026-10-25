@@ -104,9 +104,6 @@ export default function StatsPage() {
         <div>
           {project && <Link to="/stats" className="text-sm text-muted hover:text-brand">← Вся статистика</Link>}
           <h1 className="mt-1 break-words text-2xl font-bold tracking-tight text-ink sm:text-3xl">{project ? `Статистика: ${project.name}` : 'Статистика'}</h1>
-          <p className="mt-2 text-sm text-muted">
-            {project ? 'Посещаемость проекта, источники переходов и его доля среди всех проектов.' : 'Посещаемость сайта и источники переходов. Выберите проект, чтобы посмотреть его отдельно.'}
-          </p>
         </div>
         {project && <Link to={`/projects/${project.id}`} className="self-start rounded-lg border border-line px-4 py-2 text-sm hover:bg-brand-soft sm:self-auto">Открыть проект</Link>}
       </header>
@@ -150,10 +147,7 @@ export default function StatsPage() {
 
       {!hasProjectEvents && (
         <section className="rounded-2xl border border-dashed border-line-strong bg-surface p-6 text-center">
-          <h2 className="text-lg font-semibold text-ink">Статистика пока пуста</h2>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
-            Посещения записываются автоматически, когда пользователи открывают объекты. Для демонстрации можно сгенерировать активность за 30 дней.
-          </p>
+          <h2 className="text-lg font-semibold text-ink">Нет посещений</h2>
           <button type="button" disabled={projects.length === 0} onClick={() => addDemoEvents(generateDemoEvents(projects.map((item) => item.id), []))}
             className="mt-4 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
             Сгенерировать демо-данные

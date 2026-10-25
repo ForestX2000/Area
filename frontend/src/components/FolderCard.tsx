@@ -38,11 +38,11 @@ export default function FolderCard({ folder, projects, onOpen, onDelete, onDropP
         {inside.length > 0
           ? <ul className="space-y-0.5 text-xs text-muted">{inside.slice(0, 3).map((project) => <li key={project.id} className="truncate">• {project.name}</li>)}
             {inside.length > 3 && <li>и ещё {inside.length - 3}</li>}</ul>
-          : <p className="text-xs text-muted">{over ? 'Отпусти, чтобы положить карту в папку' : 'Перетащи сюда карту'}</p>}
+          : <p className="text-xs text-muted">{over ? 'Отпустите карту, чтобы добавить её в папку' : 'Перетащите карту в папку'}</p>}
       </button>
       <div className="p-5">
         <h3 className="truncate text-lg font-bold text-body" title={folder.name}>{folder.name}</h3>
-        <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{folder.description || 'Папка проектов'}</p>
+        {folder.description && <p className="mt-1 line-clamp-2 text-sm text-muted">{folder.description}</p>}
         <p className="mt-3 text-xs text-muted">Карт в папке: {inside.length}</p>
         <div className="mt-4 flex items-center justify-between gap-2">
           <button type="button" onClick={onOpen} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover">

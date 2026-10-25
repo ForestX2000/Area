@@ -70,7 +70,7 @@ function ProjectsPage() {
       setWorkspaces(collection);
       setError("");
     } catch {
-      setError("Не удалось сохранить папки. Проверь доступное место в браузере.");
+      setError("Не удалось сохранить папки. Проверьте доступное место в браузере.");
     }
   }
 
@@ -100,7 +100,7 @@ function ProjectsPage() {
     event.preventDefault();
 
     if (!name.trim()) {
-      setError(creatingFolder ? "Введи название папки." : "Введи название проекта.");
+      setError(creatingFolder ? "Введите название папки." : "Введите название проекта.");
       return;
     }
 
@@ -122,7 +122,7 @@ function ProjectsPage() {
       closeForm();
     } catch {
       setError(
-        "Не удалось сохранить проект. Проверь доступное место в браузере.",
+        "Не удалось сохранить проект. Проверьте доступное место в браузере.",
       );
     }
   }
@@ -143,7 +143,7 @@ function ProjectsPage() {
       setProjects(updatedProjects);
       setError("");
     } catch {
-      setError("Не удалось удалить проект. Попробуй ещё раз.");
+      setError("Не удалось удалить проект. Повторите попытку.");
     }
   }
 
@@ -191,19 +191,11 @@ function ProjectsPage() {
     <div className="min-h-screen bg-page text-body">
       <div className="mx-auto max-w-[1400px] py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <section className="mb-9">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">
-            Твоё пространство
-          </p>
-
           <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-body sm:text-4xl">
                 Мои проекты
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-                Организуй здания, планы помещений и панорамы в одном месте.
-                Складывай карты в папки, чтобы связанные объекты лежали рядом.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -238,15 +230,9 @@ function ProjectsPage() {
         {formOpen && (
           <section className="mb-9 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-5 sm:px-7">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand">
-                {creatingFolder ? 'Новая папка' : openFolder ? `Новая карта в папке «${openFolder.name}»` : 'Новый объект'}
-              </p>
               <h3 className="text-lg font-bold text-body">
-                {creatingFolder ? 'Создание папки' : 'Создание проекта'}
+                {creatingFolder ? 'Создание папки' : openFolder ? `Новая карта в папке «${openFolder.name}»` : 'Создание проекта'}
               </h3>
-              <p className="mt-1 text-sm text-muted">
-                {creatingFolder ? 'Назови папку — потом перетащи в неё карты.' : 'Укажи название и при необходимости добавь описание пространства.'}
-              </p>
             </div>
 
             <form className="grid gap-5 p-5 sm:p-7" onSubmit={handleSubmit}>
@@ -278,7 +264,7 @@ function ProjectsPage() {
                     id="project-description"
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
-                    placeholder={creatingFolder ? "Что лежит в папке" : "Кратко опиши пространство"}
+                    placeholder={creatingFolder ? "Описание папки" : "Описание проекта"}
                     maxLength={1000}
                     className={inputClass}
                   />
@@ -334,7 +320,7 @@ function ProjectsPage() {
               )}
             </div>
             {folderProjects.length === 0
-              ? <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В папке пока нет карт. Выбери карту в списке выше или перетащи её на папку.</p>
+              ? <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В папке нет карт. Добавьте карту из списка выше или перетащите её в папку.</p>
               : <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 2xl:grid-cols-3">
                 {folderProjects.map((project) => projectCard(project,
                   <button type="button" onClick={() => removeFromFolder(openFolder.id, project.id)}
@@ -358,12 +344,8 @@ function ProjectsPage() {
             </div>
 
             <h3 className="text-xl font-bold text-body">
-              Начни с первого проекта
+              Нет проектов
             </h3>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
-              Создай пространство, загрузи план помещения и отметь места, к
-              которым хочешь прикрепить панорамы.
-            </p>
 
             {!formOpen && (
               <button
@@ -374,7 +356,7 @@ function ProjectsPage() {
                 }}
                 className="mt-6 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
               >
-                + Создать первый проект
+                + Создать проект
               </button>
             )}
           </section>
@@ -382,12 +364,9 @@ function ProjectsPage() {
           <section>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-body">{filter === 'workspace' ? 'Папки проектов' : 'Все проекты'}</h3>
-              <span className="text-xs text-muted">
-                {shownFolders.length + shownProjects.length} в списке
-              </span>
             </div>
             {filter !== 'map' && folders.length > 0 && projects.length > 0 && (
-              <p className="mb-4 text-xs text-muted">Перетащи карту на папку, чтобы положить её туда.</p>
+              <p className="mb-4 text-xs text-muted">Чтобы добавить карту в папку, перетащите её на папку.</p>
             )}
 
             <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 2xl:grid-cols-3">
@@ -397,8 +376,8 @@ function ProjectsPage() {
                 onDropProject={(projectId) => addToFolder(folder.id, projectId)} />)}
               {shownProjects.map((project) => projectCard(project))}
             </div>
-            {filter === 'workspace' && folders.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Нету папок проектов</p>}
-            {filter === 'map' && projects.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В этой категории пока нет проектов.</p>}
+            {filter === 'workspace' && folders.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Нет папок проектов</p>}
+            {filter === 'map' && projects.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В этой категории нет проектов.</p>}
           </section>
         )}
       </div>

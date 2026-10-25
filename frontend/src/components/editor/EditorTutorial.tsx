@@ -48,6 +48,17 @@ const STEPS: Step[] = [
   { title: 'Обучение пройдено!', text: 'Теперь ты знаешь основы. Ещё в редакторе есть лестницы между этажами, метки и построение маршрута. Повторить обучение можно кнопкой «? Обучение».' },
 ]
 
+const MOBILE_STEPS: Step[] = STEPS.map((step, index) => ({ ...step, ...({
+  1: { text: 'Нажми «Инструменты» внизу экрана, затем выбери «Прямоугольник». Панель закроется, чтобы освободить холст.', target: '[aria-label="Открыть инструменты"]' },
+  2: { text: 'Коснись холста и протяни пальцем по диагонали — получится комната. Двумя пальцами можно двигать и масштабировать чертёж.' },
+  3: { text: 'Редактор вернулся к выделению. Коснись комнаты и перетащи её пальцем.' },
+  4: { text: 'Открой «Свойства» внизу экрана и введи название комнаты. После этого закрой панель крестиком.', target: '[aria-label="Открыть свойства"]' },
+  5: { text: 'Закрой свойства и потяни круглый маркер над комнатой, чтобы повернуть её.' },
+  6: { text: 'Нажми «Действия» внизу экрана: здесь копирование, поворот, слои и выбор нескольких объектов.', target: '[aria-label="Открыть действия"]' },
+  7: { text: 'Открой «Инструменты», выбери «Линейка» и протяни пальцем вдоль стены.', target: '[aria-label="Открыть инструменты"]' },
+  8: { text: 'Нажми стрелку отмены в левом верхнем углу холста — последний замер исчезнет.', target: '[aria-label="Отменить действие"]' },
+} as Record<number, Partial<Step>>)[index] }))
+
 function snapshot(context: TutorialContext, index: number, previous?: Progress): Progress {
   const room = previous?.roomId ? undefined : context.objects.find((object) => object.type === 'rectangle' && previous && !previous.ids.includes(object.id))
   const roomId = previous?.roomId ?? room?.id
@@ -57,8 +68,15 @@ function snapshot(context: TutorialContext, index: number, previous?: Progress):
 }
 
 export default function EditorTutorial({ context, onClose }: { context: TutorialContext; onClose: () => void }) {
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 1023px)')
+    const update = () => setMobile(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
   const [progress, setProgress] = useState<Progress>(() => snapshot(context, 0))
-  const step = STEPS[progress.index]
+  const step = (mobile ? MOBILE_STEPS : STEPS)[progress.index]
   const room = context.objects.find((object) => object.id === progress.roomId)
   if (step.check?.(context, progress, room)) setProgress(snapshot(context, progress.index + 1, progress))
   const [rect, setRect] = useState<DOMRect | null>(null)
@@ -69,7 +87,7 @@ export default function EditorTutorial({ context, onClose }: { context: Tutorial
     let frame = 0
     const measure = () => {
       const element = step.target ? document.querySelector(step.target) : null
-      const next = element?.getBoundingClientRect() ?? null
+      const next = element?.getClientRects().length ? element.getBoundingClientRect() : null
       setRect((current) => current && next && ['x', 'y', 'width', 'height'].every((key) => current[key as 'x'] === next[key as 'x']) ? current : next)
       frame = requestAnimationFrame(measure)
     }
@@ -94,8 +112,8 @@ export default function EditorTutorial({ context, onClose }: { context: Tutorial
   }
 
   const gap = 16
-  let left = (window.innerWidth - cardSize.width) / 2, top = window.innerHeight - cardSize.height - 24
-  if (rect) {
+  let left = (window.innerWidth - cardSize.width) / 2, top = mobile ? 72 : window.innerHeight - cardSize.height - 24
+  if (rect && !mobile) {
     // Холст большой — карточку ставим в его угол, чтобы не закрывать место для рисования.
     const large = rect.width > window.innerWidth * 0.35
     if (large) { left = rect.right - cardSize.width - gap; top = rect.top + gap }

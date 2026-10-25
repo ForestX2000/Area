@@ -276,12 +276,13 @@ test('Shift snaps to other objects; disabling grid snap allows free coordinates'
 
 test('tools and canvas remain usable on a narrow screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Открыть инструменты', exact: true }).click()
   await page.getByRole('button', { name: 'Прямоугольник', exact: true }).click()
-  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(page.getByRole('complementary', { name: 'Панель инструментов', exact: true })).toBeHidden()
   const bounds = (await canvas(page).boundingBox())!
   expect(bounds.height).toBeGreaterThanOrEqual(384)
   expect(bounds.width).toBeGreaterThan(300)
-  await drag(page, { x: 50, y: 50 }, { x: 200, y: 200 })
+  await drag(page, { x: 50, y: 100 }, { x: 200, y: 250 })
   await expect(shapes(page)).toHaveCount(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })

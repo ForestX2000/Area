@@ -30,15 +30,15 @@ export default function EditorNavigation({ projectId, mode = '2d', can3D, onMode
       .catch(() => { if (!cancelled) setHasPanorama(false) })
     return () => { cancelled = true }
   }, [storageId, can3D])
-  return <nav aria-label="Навигация редактора" className="flex w-full flex-wrap items-center justify-center gap-3 border-b border-line bg-surface px-3 py-3">
+  return <nav aria-label="Навигация редактора" className="editor-navigation flex w-full flex-wrap items-center justify-center gap-3 border-b border-line bg-surface px-3 py-3">
     {onBack ? <button type="button" onClick={onBack} aria-label="К 2D-карте" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">←</button>
       : <Link to={`/projects/${projectId}`} aria-label="Назад к проекту" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">←</Link>}
-    <span className="max-w-60 truncate text-sm font-semibold text-ink" title={project?.name}>{project?.name ?? 'Проект'}</span>
+    <span className="editor-project-name max-w-60 truncate text-sm font-semibold text-ink" title={project?.name}>{project?.name ?? 'Проект'}</span>
     {mode === '3d' && onBack ? <button type="button" onClick={onBack} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">2D-карта и панорамы</button>
-      : <Link to={floorPath(`/projects/${projectId}/map?mode=2d`)} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">2D-карта и панорамы</Link>}
-    {workspace && <Link to={`/workspace/${workspace.id}`} className="max-w-48 truncate rounded-lg border border-brand-border bg-brand-soft px-3 py-2 text-sm text-brand">{workspace.name}</Link>}
+      : <Link to={floorPath(`/projects/${projectId}/map?mode=2d`)} className="editor-map-link rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">2D-карта и панорамы</Link>}
+    {workspace && <Link to={`/workspace/${workspace.id}`} className="editor-workspace-link max-w-48 truncate rounded-lg border border-brand-border bg-brand-soft px-3 py-2 text-sm text-brand">{workspace.name}</Link>}
     {project && <FloorPicker project={project} mode={mode} />}
-    <div className="flex items-center gap-2 text-xs text-muted"><span>2D</span>
+    <div className="editor-mode-switch flex items-center gap-2 text-xs text-muted"><span>2D</span>
       <button type="button" role="switch" aria-label="Режим 3D" aria-checked={mode === '3d'} disabled={mode === '2d' && !(can3D ?? hasPanorama)}
         title={(can3D ?? hasPanorama) ? 'Переключить 2D / 3D' : 'Добавьте панораму на 2D-карте'}
         onClick={() => onModeChange ? onModeChange() : navigate(floorPath(`/projects/${projectId}/map?mode=${mode === '2d' ? '3d' : '2d'}`))}

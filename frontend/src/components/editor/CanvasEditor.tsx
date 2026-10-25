@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent, ReactNode } from 'react'
 import type { DrawingObject, DrawingTool, Point } from '../../types/drawing'
-import { addVertex, canAddVertex, createDrawing, drawingPoints, hitObject, intersectsSelection, isStairs, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, objectLocalBounds, objectsBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, rotateDrawing, vertices } from './drawingGeometry'
+import { addVertex, canAddVertex, createDrawing, drawingPoints, hitObject, intersectsSelection, isStairs, MARKER_LABELS, MAX_ZOOM, MIN_ZOOM, moveVertex, objectBounds, objectLocalBounds, objectsBounds, PIXELS_PER_METRE, resizeDrawing, resizeHandles, rotateDrawing, SHAPE_TOOLS, vertices } from './drawingGeometry'
 import DrawingShape from './DrawingShape'
 
 interface CanvasEditorProps {
@@ -20,6 +20,8 @@ interface CanvasEditorProps {
   onActivateMarker?: (object: DrawingObject) => void
   onContextMenu?: (menu: { clientX: number; clientY: number; point: Point; objectId?: string }) => void
   overlay?: ReactNode
+  panMode?: boolean
+  multiSelect?: boolean
 }
 
 type Gesture =
@@ -47,13 +49,17 @@ interface ClickPoint {
 const formatMetres = (value: number) => (value / PIXELS_PER_METRE).toFixed(2)
 
 export default function CanvasEditor({ objects, onObjectsChange, selectedIds, onSelect,
-  tool, gridSize, snapToGrid, zoom, onZoomChange, selectedVertex, onVertexSelect, showServiceMarks = false, onActivateMarker, onContextMenu, overlay }: CanvasEditorProps) {
+  tool, gridSize, snapToGrid, zoom, onZoomChange, selectedVertex, onVertexSelect, showServiceMarks = false, onActivateMarker, onContextMenu, overlay, panMode = false, multiSelect = false }: CanvasEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const contentRef = useRef<SVGGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
   const lastClickRef = useRef<ClickPoint | null>(null)
   const clickCandidateRef = useRef<(ClickPoint & { pointerId: number }) | null>(null)
   const viewportRef = useRef({ zoom, pan: { x: 0, y: 0 } })
+  const touchesRef = useRef(new Map<number, Point>())
+  const touchNavigationRef = useRef(false)
+  const pinchRef = useRef<{ distance: number; midpoint: Point; zoom: number; pan: Point } | null>(null)
+  const touchStartRef = useRef<{ selection: string[]; polygon: typeof polygon } | null>(null)
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
   const [drafts, setDrafts] = useState<DrawingObject[]>([])
   const [selectionBox, setSelectionBox] = useState<{ start: Point; end: Point } | null>(null)
@@ -70,6 +76,8 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
   const patternId = useId().replace(/:/g, '')
   const cellSize = Math.max(0.1, gridSize) * PIXELS_PER_METRE
+  const toolLabel = SHAPE_TOOLS.find((item) => item.id === tool)?.label
+    ?? `${MARKER_LABELS[tool.replace('marker-', '') as keyof typeof MARKER_LABELS] ?? ''} метка`
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
   const draftsById = new Map(drafts.map((draft) => [draft.id, draft]))
   const visibleObjects = objects.filter((object) => object.markerKind !== 'service' || showServiceMarks)
@@ -117,8 +125,15 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       setPan(nextPan)
       onZoomChange(nextZoom)
     }
+    // Keep the browser's touch gesture recognizer out of drawing gestures, including
+    // synthetic clicks after a drag. Pointer events handle all canvas interaction.
+    const handleTouchStart = (event: TouchEvent) => event.preventDefault()
+    svg.addEventListener('touchstart', handleTouchStart, { passive: false })
     svg.addEventListener('wheel', handleWheel, { passive: false })
-    return () => svg.removeEventListener('wheel', handleWheel)
+    return () => {
+      svg.removeEventListener('touchstart', handleTouchStart)
+      svg.removeEventListener('wheel', handleWheel)
+    }
   }, [onZoomChange])
 
   function svgPoint(event: PointerEvent<SVGSVGElement>, world = true): Point {
@@ -171,10 +186,33 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function handlePointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === 'touch') {
+      if (touchesRef.current.size === 0) touchStartRef.current = { selection: selectedIds, polygon }
+      touchesRef.current.set(event.pointerId, svgPoint(event, false))
+      event.currentTarget.setPointerCapture(event.pointerId)
+      if (touchesRef.current.size >= 2) {
+        event.preventDefault()
+        if (!touchNavigationRef.current) {
+          clearGesture(true)
+          if (touchStartRef.current) {
+            onSelect(touchStartRef.current.selection)
+            setPolygon(touchStartRef.current.polygon)
+          }
+        }
+        touchNavigationRef.current = true
+        const [a, b] = [...touchesRef.current.values()]
+        pinchRef.current = { distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+          midpoint: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          zoom: viewportRef.current.zoom, pan: { ...viewportRef.current.pan } }
+        setIsPanning(true)
+        return
+      }
+      if (touchNavigationRef.current) return
+    }
     if ((event.button !== 0 && event.button !== 1) || gestureRef.current) return
     event.preventDefault()
     event.currentTarget.focus({ preventScroll: true })
-    if (event.button === 1) {
+    if (event.button === 1 || panMode) {
       lastClickRef.current = null
       clickCandidateRef.current = null
       gestureRef.current = { kind: 'pan', pointerId: event.pointerId,
@@ -217,7 +255,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       event.currentTarget.setPointerCapture(event.pointerId)
       return
     }
-    if (tool === 'select' && event.shiftKey && !(event.target as Element).closest('[data-resize-handle]')) {
+    if (tool === 'select' && (event.shiftKey || multiSelect) && !(event.target as Element).closest('[data-resize-handle]')) {
       lastClickRef.current = null
       clickCandidateRef.current = null
       const object = findObject(point)
@@ -308,6 +346,23 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === 'touch' && touchesRef.current.has(event.pointerId)) {
+      touchesRef.current.set(event.pointerId, svgPoint(event, false))
+      if (touchNavigationRef.current) {
+        const pinch = pinchRef.current
+        if (!pinch || touchesRef.current.size < 2) return
+        const [a, b] = [...touchesRef.current.values()]
+        const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM,
+          pinch.zoom * Math.hypot(b.x - a.x, b.y - a.y) / pinch.distance))
+        const ratio = nextZoom / pinch.zoom
+        const nextPan = { x: (a.x + b.x) / 2 - (pinch.midpoint.x - pinch.pan.x) * ratio,
+          y: (a.y + b.y) / 2 - (pinch.midpoint.y - pinch.pan.y) * ratio }
+        viewportRef.current = { zoom: nextZoom, pan: nextPan }
+        setPan(nextPan)
+        onZoomChange(nextZoom)
+        return
+      }
+    }
     const candidate = clickCandidateRef.current
     if (candidate && Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y) > 5) clickCandidateRef.current = null
     const gesture = gestureRef.current
@@ -341,6 +396,13 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
+    touchesRef.current.delete(event.pointerId)
+    if (touchNavigationRef.current) {
+      pinchRef.current = null
+      if (touchesRef.current.size === 0) { touchNavigationRef.current = false; setIsPanning(false) }
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+      return
+    }
     const candidate = clickCandidateRef.current
     if (candidate?.pointerId === event.pointerId && event.button === 0
       && Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y) <= 5) {
@@ -376,6 +438,16 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
+  function cancelPointer(event: PointerEvent<SVGSVGElement>) {
+    touchesRef.current.delete(event.pointerId)
+    if (touchNavigationRef.current) {
+      pinchRef.current = null
+      if (touchesRef.current.size === 0) { touchNavigationRef.current = false; setIsPanning(false) }
+      return
+    }
+    if (gestureRef.current?.pointerId === event.pointerId) clearGesture(true)
+  }
+
   function renderObject(object: DrawingObject, preview = false) {
     const [a, b] = drawingPoints(object)
     const selected = selectedIds.includes(object.id) && !preview
@@ -393,14 +465,17 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         data-rotation={object.rotation ?? 0}
         data-preview={preview || undefined} data-selected={selected || undefined} pointerEvents={preview ? 'none' : undefined}>
         <DrawingShape object={object} stroke={selected ? 'var(--ttk-red)' : undefined} preview={preview} />
-        {editingVertices && vertices(object).map((point, index) => <circle key={index} data-vertex-handle={index}
+        {editingVertices && vertices(object).map((point, index) => <g key={index} data-vertex-handle={index}>
+          <circle className="canvas-touch-target" cx={point.x} cy={point.y} r={18 / zoom} fill="transparent" />
+          <circle
           cx={point.x} cy={point.y} r={6 / zoom} fill={selectedVertex === index ? 'var(--ttk-red)' : 'white'}
-          stroke="var(--ttk-red)" strokeWidth={2 / zoom} style={{ cursor: 'move' }} />)}
+          stroke="var(--ttk-red)" strokeWidth={2 / zoom} style={{ cursor: 'move' }} /></g>)}
         {(showHandles || (object.type === 'dimension' && !editingVertices)) && (showHandles ? resizeHandles(object) : [a, b]).map((point, index) => (
-          <circle key={index} cx={point.x} cy={point.y} r={(showHandles ? 6 : 4) / zoom}
-            data-resize-handle={showHandles ? index : undefined}
+          <g key={index} data-resize-handle={showHandles ? index : undefined}>
+          {showHandles && <circle className="canvas-touch-target" cx={point.x} cy={point.y} r={18 / zoom} fill="transparent" />}
+          <circle cx={point.x} cy={point.y} r={(showHandles ? 6 : 4) / zoom}
             style={showHandles ? { cursor: object.type !== 'rectangle' ? 'move' : index % 2 === 0 ? 'nwse-resize' : 'nesw-resize' } : undefined}
-            fill={selected ? 'var(--ttk-red)' : 'var(--ttk-body)'} stroke="white" strokeWidth={1 / zoom} />
+            fill={selected ? 'var(--ttk-red)' : 'var(--ttk-body)'} stroke="white" strokeWidth={1 / zoom} /></g>
         ))}
         {(selected || preview || object.type === 'dimension' || object.label) && (!freeformPolygon || object.label) && (
           <text x={(box.left + box.right) / 2} y={box.top - 10 / zoom} fontSize={12 / zoom}
@@ -415,7 +490,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   return (
     <div className="relative w-full h-full bg-surface-muted overflow-hidden">
       <svg ref={svgRef} aria-label="Холст чертежа" role="application" tabIndex={0}
-        className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
+        className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : panMode ? 'cursor-grab' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
         onContextMenu={(event) => {
           const gesture = gestureRef.current
@@ -483,7 +558,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             if (gesture && event.currentTarget.hasPointerCapture(gesture.pointerId)) event.currentTarget.releasePointerCapture(gesture.pointerId)
           }
         }}
-        onPointerCancel={() => clearGesture(true)} onLostPointerCapture={() => clearGesture(true)}>
+        onPointerCancel={cancelPointer} onLostPointerCapture={cancelPointer}>
         <defs>
           <pattern id={`${patternId}-minor`} width={cellSize * zoom} height={cellSize * zoom}
             x={pan.x} y={pan.y} patternUnits="userSpaceOnUse">
@@ -517,6 +592,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
                 onObjectsChange(objects.map((object) => rotated.get(object.id) ?? object))
               }}>
               <title>Перетащите для поворота. Shift — шаг 15°. Стрелки ← / → — поворот с клавиатуры.</title>
+              <circle className="canvas-touch-target" r="22" fill="transparent" />
               <circle r="12" fill="white" stroke="var(--ttk-red)" strokeWidth="1.5" />
               <path d="M 5 -3 A 6 6 0 1 0 5 4 M 5 -7 V -2 H 0" fill="none" stroke="var(--ttk-red)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
             </g>
@@ -550,8 +626,15 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             fill="var(--ttk-red-hover)" stroke="white" strokeWidth={1.5 / zoom} pointerEvents="none" />}
         </g>
       </svg>
-      <div className="absolute bottom-3 left-3 pointer-events-none rounded border border-line bg-surface/90 px-2 py-1 text-xs text-muted">
+      <div className="absolute bottom-3 left-3 pointer-events-none hidden rounded border border-line bg-surface/90 px-2 py-1 text-xs text-muted lg:block">
         {tool === 'polygon' ? `Многоугольник: ${polygonPoints.length} вершин · клик по первой точке — завершить · правая кнопка / Escape — отменить` : `Колесико / два пальца — перемещение · Ctrl + колесо — масштаб · ячейка ${gridSize} м`}
+      </div>
+      <div className="absolute bottom-2 left-2 right-2 flex flex-wrap items-center gap-2 lg:hidden">
+        <p role="status" className="pointer-events-none rounded-lg border border-line bg-surface/90 px-2 py-1 text-[11px] text-muted">{panMode ? 'Двигайте холст одним пальцем' : tool === 'polygon' ? `Многоугольник · вершин: ${polygonPoints.length}` : multiSelect && tool === 'select' ? 'Касайтесь объектов для выбора группы' : tool !== 'select' ? `${toolLabel} · ${tool === 'vertices' ? 'тяните вершины' : 'рисуйте пальцем'}` : 'Два пальца — перемещение и масштаб'}</p>
+        {polygonPoints.length > 0 && <>
+          <button type="button" disabled={polygonPoints.length < 3} onClick={finishPolygon} className="min-h-11 rounded-lg bg-brand px-3 text-xs text-white disabled:opacity-40">Завершить фигуру</button>
+          <button type="button" onClick={() => { setPolygon({ tool, points: [], cursor: null }); setSnapTarget(null) }} className="min-h-11 rounded-lg border border-line bg-surface px-3 text-xs">Отменить фигуру</button>
+        </>}
       </div>
     </div>
   )

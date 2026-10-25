@@ -49,7 +49,7 @@ async function drawings(page: Page): Promise<DrawingObject[]> {
 
 async function storedPanorama(page: Page, key: string) {
   return page.evaluate((key) => new Promise<boolean>((resolve, reject) => {
-    const request = indexedDB.open('space-map-db', 1)
+    const request = indexedDB.open('space-map-db')
     request.onsuccess = () => {
       const get = request.result.transaction('map-images', 'readonly').objectStore('map-images').get(key)
       get.onsuccess = () => { request.result.close(); resolve(get.result instanceof Blob) }
@@ -135,7 +135,7 @@ test('a missing panorama file closes the viewer with a message', async ({ page }
   await upload(page, 'Создать панораму', 'hall-360.png')
   // The marker keeps its key while the file disappears, e.g. after undoing a deletion.
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open('space-map-db', 1)
+    const request = indexedDB.open('space-map-db')
     request.onsuccess = () => {
       const tx = request.result.transaction('map-images', 'readwrite')
       tx.objectStore('map-images').delete('panorama:site:hall')

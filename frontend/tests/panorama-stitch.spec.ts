@@ -51,7 +51,7 @@ async function screen(page: Page, point: Point) {
 
 async function storedPanorama(page: Page, key: string) {
   return page.evaluate((key) => new Promise<boolean>((resolve, reject) => {
-    const request = indexedDB.open('space-map-db', 1)
+    const request = indexedDB.open('space-map-db')
     request.onupgradeneeded = () => request.result.createObjectStore('map-images')
     request.onsuccess = () => {
       const get = request.result.transaction('map-images', 'readonly').objectStore('map-images').get(key)
@@ -160,7 +160,7 @@ test('a map point panorama is stitched from photos and shown on the map', async 
   await page.evaluate(async (plan) => {
     const blob = await (await fetch(`data:image/png;base64,${plan}`)).blob()
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('space-map-db', 1)
+      const request = indexedDB.open('space-map-db')
       request.onupgradeneeded = () => request.result.createObjectStore('map-images')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

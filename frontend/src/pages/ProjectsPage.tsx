@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { createWorkspace, getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
+import { getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
 import { getFloors } from '../utils/floorStorage';
 import ProjectCard from "../components/ProjectCard";
 import { useConfirmation } from '../contexts/useConfirmation';
@@ -14,12 +14,13 @@ import {
 
 function ProjectsPage() {
   const confirm = useConfirmation();
-  const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<Project[]>(() => getProjects());
   const [workspaces, setWorkspaces] = useState(() => getWorkspaces(projects, false));
-  const [kind, setKind] = useState<'map' | 'workspace'>(() => searchParams.get('create') === 'workspace' ? 'workspace' : 'map');
   const [filter, setFilter] = useState<'all' | 'map' | 'workspace'>('all');
-  const [isFormOpen, setIsFormOpen] = useState(() => searchParams.get('create') === 'workspace');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  // Пункт меню «Создать проект» ведёт на /?create=project — форма открывается так же, как по кнопке в шапке.
+  const formOpen = isFormOpen || searchParams.has("create");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
@@ -29,9 +30,15 @@ function ProjectsPage() {
     return { total: views.length, byProject: new Map(countBy(views, (event) => event.projectId)) };
   }, [events]);
 
+  const closeForm = useCallback(() => {
+    setIsFormOpen(false);
+    if (searchParams.has("create")) setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   useEffect(() => {
     function handleToggleForm() {
-      setIsFormOpen((open) => !open);
+      if (formOpen) closeForm();
+      else setIsFormOpen(true);
       setError("");
     }
 
@@ -43,7 +50,7 @@ function ProjectsPage() {
         handleToggleForm,
       );
     };
-  }, []);
+  }, [formOpen, closeForm]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,14 +60,6 @@ function ProjectsPage() {
       return;
     }
 
-    if (kind === 'workspace') {
-      const workspace = createWorkspace(name, [], description);
-      const next = { ...workspaces, activeId: workspace.id, workspaces: [...workspaces.workspaces, workspace] };
-      try {
-        saveWorkspaces(next); setWorkspaces(next); setName(''); setDescription(''); setError(''); setIsFormOpen(false); setFilter('all');
-      } catch { setError('Не удалось сохранить Workspace. Проверь доступное место в браузере.'); }
-      return;
-    }
     const newProject = createProject(name.trim(), description.trim());
     const updatedProjects = [...projects, newProject];
 
@@ -70,7 +69,7 @@ function ProjectsPage() {
       setName("");
       setDescription("");
       setError("");
-      setIsFormOpen(false);
+      closeForm();
     } catch {
       setError(
         "Не удалось сохранить проект. Проверь доступное место в браузере.",
@@ -153,7 +152,7 @@ function ProjectsPage() {
           </div>
         )}
 
-        {isFormOpen && (
+        {formOpen && (
           <section className="mb-9 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-5 sm:px-7">
               <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand">
@@ -168,11 +167,6 @@ function ProjectsPage() {
             </div>
 
             <form className="grid gap-5 p-5 sm:p-7" onSubmit={handleSubmit}>
-              <label className="grid gap-2 text-sm font-semibold">Тип проекта
-                <select aria-label="Тип проекта" value={kind} onChange={(event) => setKind(event.target.value as 'map' | 'workspace')} className="max-w-sm rounded-lg border border-line-strong bg-surface px-4 py-3">
-                  <option value="map">Карта</option><option value="workspace">Workspace</option>
-                </select>
-              </label>
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-body">
@@ -212,7 +206,7 @@ function ProjectsPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsFormOpen(false);
+                    closeForm();
                     setName("");
                     setDescription("");
                     setError("");
@@ -225,7 +219,7 @@ function ProjectsPage() {
                   type="submit"
                   className="rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
                 >
-                  {kind === 'workspace' ? 'Создать Workspace' : 'Создать проект'}
+                  Создать проект
                 </button>
               </div>
             </form>
@@ -256,7 +250,7 @@ function ProjectsPage() {
               которым хочешь прикрепить панорамы.
             </p>
 
-            {!isFormOpen && (
+            {!formOpen && (
               <button
                 type="button"
                 onClick={() => {

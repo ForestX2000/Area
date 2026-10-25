@@ -8,7 +8,6 @@ import {
   addDemoEvents, clearEvents, countBy, dailySeries, filterEvents, generateDemoEvents, PAGE_LABELS,
   sourceLabel, summarize, useAnalyticsEvents, type StatsFilter,
 } from '../utils/analytics'
-import { getAccountNames } from '../utils/auth'
 import { useProjects } from '../utils/useProjects'
 
 const PERIODS = [
@@ -37,7 +36,6 @@ const plural = (value: number, forms: [string, string, string]) => {
   return `${value.toLocaleString('ru-RU')} ${forms[form]}`
 }
 const viewsUnit = (value: number) => plural(value, ['просмотр', 'просмотра', 'просмотров'])
-const clicksUnit = (value: number) => plural(value, ['нажатие', 'нажатия', 'нажатий'])
 
 /** Статистика для администратора: общая или по одному проекту, с выбором периода, источника и роли. */
 export default function StatsPage() {
@@ -50,10 +48,16 @@ export default function StatsPage() {
   const [source, setSource] = useState('')
   const [role, setRole] = useState('')
   const project = projects.find((item) => item.id === projectId)
-  const names = useMemo(() => getAccountNames(), [])
 
   const projectName = (id: string) => projects.find((item) => item.id === id)?.name ?? 'Удалённый проект'
-  const userName = (id: string) => names[id] ?? (id.startsWith('guest-') ? `Гость ${id.slice(6)}` : 'Пользователь')
+
+  // Посещаемость всего сайта за сегодня и вчера — не зависит от выбранного проекта и фильтров.
+  const site = useMemo(() => {
+    const today = filterEvents(events, { days: 1 })
+    const todayIds = new Set(today.map((event) => event.id))
+    const yesterday = filterEvents(events, { days: 2 }).filter((event) => !todayIds.has(event.id))
+    return { today: summarize(today), yesterday: summarize(yesterday) }
+  }, [events])
 
   const stats = useMemo(() => {
     const base: StatsFilter = { days, source: source || undefined, role: role || undefined }
@@ -61,23 +65,16 @@ export default function StatsPage() {
     const all = filterEvents(events, base)
     const scoped = projectId ? all.filter((event) => event.projectId === projectId) : all
     const views = scoped.filter((event) => event.type === 'view')
-    const clicks = scoped.filter((event) => event.type === 'click')
     const projectViews = countBy(all.filter((event) => event.type === 'view' && event.projectId), (event) => event.projectId)
-    const usersByViews = countBy(views, (event) => event.userId)
-    const clicksByUser = new Map(countBy(clicks, (event) => event.userId))
     return {
       summary: summarize(scoped),
       allSummary: summarize(all.filter((event) => event.projectId)),
       daily: dailySeries(scoped, days),
       sources: countBy(views, (event) => event.entry ?? event.source),
-      buttons: countBy(clicks, (event) => event.target).slice(0, 10),
       pages: countBy(views, (event) => event.page),
       projectViews,
       rank: projectId ? projectViews.findIndex(([id]) => id === projectId) + 1 : 0,
       views3d: views.filter((event) => event.mode === '3d').length,
-      users: usersByViews.slice(0, 8).map(([id, count]) => ({
-        id, views: count, clicks: clicksByUser.get(id) ?? 0, role: scoped.find((event) => event.userId === id)?.role,
-      })),
     }
   }, [events, days, source, role, projectId])
 
@@ -86,9 +83,10 @@ export default function StatsPage() {
   const hasDemo = events.some((event) => event.demo)
   // Заходы на главную и в профиль без проекта не делают статистику «непустой».
   const hasProjectEvents = events.some((event) => event.projectId)
+  const yesterdayHint = (value: number) => `вчера: ${value.toLocaleString('ru-RU')}`
 
   async function handleClear() {
-    if (await confirm({ title: 'Очистить статистику?', message: 'Все записанные посещения и нажатия будут удалены. Это действие нельзя отменить.' })) clearEvents()
+    if (await confirm({ title: 'Очистить статистику?', message: 'Все записанные посещения будут удалены. Это действие нельзя отменить.' })) clearEvents()
   }
 
   if (projectId && !project) {
@@ -101,20 +99,36 @@ export default function StatsPage() {
   }
 
   return (
-    // Клики по самой странице статистики не попадают в статистику.
-    <div data-track-ignore className="mx-auto max-w-[1400px] space-y-5">
+    <div className="mx-auto max-w-[1400px] space-y-5">
       <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           {project && <Link to="/stats" className="text-sm text-muted hover:text-brand">← Вся статистика</Link>}
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">{project ? `Статистика: ${project.name}` : 'Статистика'}</h1>
           <p className="mt-2 text-sm text-muted">
-            {project ? 'Посещаемость проекта, его доля среди всех проектов и нажатия кнопок.' : 'Посещаемость, источники переходов и нажатия кнопок по всем проектам.'}
+            {project ? 'Посещаемость проекта, источники переходов и его доля среди всех проектов.' : 'Посещаемость сайта и источники переходов. Выберите проект, чтобы посмотреть его отдельно.'}
           </p>
         </div>
         {project && <Link to={`/projects/${project.id}`} className="self-start rounded-lg border border-line px-4 py-2 text-sm hover:bg-brand-soft sm:self-auto">Открыть проект</Link>}
       </header>
 
+      <section aria-label="Сегодня на сайте" className="rounded-2xl border border-line bg-surface-muted p-4">
+        <h2 className="text-sm font-semibold text-ink">Сегодня на сайте</h2>
+        <p className="mt-0.5 text-xs text-muted">Все страницы и проекты, без учёта фильтров ниже.</p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <StatTile label="Посетители сегодня" value={site.today.visitors} hint={yesterdayHint(site.yesterday.visitors)} />
+          <StatTile label="Просмотры сегодня" value={site.today.views} hint={yesterdayHint(site.yesterday.views)} />
+        </div>
+      </section>
+
       <div role="group" aria-label="Фильтры" className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 rounded-lg border border-brand-border bg-brand-soft py-1 pl-3 pr-1 text-sm font-semibold text-brand">
+          Проект
+          <select aria-label="Проект" value={projectId ?? ''} onChange={(event) => navigate(event.target.value ? `/stats/${event.target.value}` : '/stats')}
+            className="max-w-64 rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-normal text-body">
+            <option value="">Все проекты</option>
+            {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
         <div role="radiogroup" aria-label="Период" className="flex rounded-lg border border-line bg-surface p-1">
           {PERIODS.map((period) => (
             <button key={period.label} type="button" role="radio" aria-checked={days === period.days} onClick={() => setDays(period.days)}
@@ -132,17 +146,13 @@ export default function StatsPage() {
           <option value="user">Пользователи</option>
           <option value="admin">Администраторы</option>
         </select>
-        <select aria-label="Проект" value={projectId ?? ''} onChange={(event) => navigate(event.target.value ? `/stats/${event.target.value}` : '/stats')} className={selectClass}>
-          <option value="">Все проекты</option>
-          {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
       </div>
 
       {!hasProjectEvents && (
         <section className="rounded-2xl border border-dashed border-line-strong bg-surface p-6 text-center">
           <h2 className="text-lg font-semibold text-ink">Статистика пока пуста</h2>
           <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
-            Посещения и нажатия записываются автоматически, когда пользователи открывают объекты. Для демонстрации можно сгенерировать активность за 30 дней.
+            Посещения записываются автоматически, когда пользователи открывают объекты. Для демонстрации можно сгенерировать активность за 30 дней.
           </p>
           <button type="button" disabled={projects.length === 0} onClick={() => addDemoEvents(generateDemoEvents(projects.map((item) => item.id), []))}
             className="mt-4 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50">
@@ -152,21 +162,18 @@ export default function StatsPage() {
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile label="Просмотры" value={summary.views} />
         <StatTile label="Уникальные посетители" value={summary.visitors} />
-        <StatTile label="Нажатия кнопок" value={summary.clicks} hint={summary.views ? `${(summary.clicks / summary.views).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} на просмотр` : undefined} />
         <StatTile label="Открытия панорам" value={summary.panoramas} />
         <StatTile label="Просмотры в 3D" value={summary.views ? formatPercent(stats.views3d / summary.views) : '—'} hint={`${stats.views3d.toLocaleString('ru-RU')} из ${summary.views.toLocaleString('ru-RU')}`} />
       </div>
 
       {project && (
         <Card title="Доля проекта" description="Сравнение с суммой по всем проектам за тот же период и с теми же фильтрами.">
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2">
             <Meter label="Доля просмотров" value={stats.allSummary.views ? summary.views / stats.allSummary.views : 0}
               detail={`${viewsUnit(summary.views)} из ${stats.allSummary.views.toLocaleString('ru-RU')}`} />
-            <Meter label="Доля нажатий" value={stats.allSummary.clicks ? summary.clicks / stats.allSummary.clicks : 0}
-              detail={`${clicksUnit(summary.clicks)} из ${stats.allSummary.clicks.toLocaleString('ru-RU')}`} />
             <div>
               <p className="text-sm text-body">Место по просмотрам</p>
               <p className="mt-1 text-3xl font-semibold text-ink">{stats.rank ? `${stats.rank} из ${stats.projectViews.length}` : '—'}</p>
@@ -176,7 +183,7 @@ export default function StatsPage() {
         </Card>
       )}
 
-      <Card title="Посещаемость по дням" description="Просмотры страниц; в подсказке — уникальные посетители за день.">
+      <Card title="Посещаемость по дням" description={project ? 'Просмотры проекта; в подсказке — уникальные посетители за день.' : 'Просмотры страниц; в подсказке — уникальные посетители за день.'}>
         <DailyChart data={stats.daily} title="Просмотры по дням" />
       </Card>
 
@@ -184,39 +191,16 @@ export default function StatsPage() {
         <Card title="Источники переходов" description="Откуда пришли посетители: список объектов, ссылки, внешние сайты и метки кампаний (utm_source).">
           <BarList items={stats.sources.map(([key, value]) => ({ key, label: sourceLabel(key), value }))} total={summary.views} unit={viewsUnit} />
         </Card>
-        <Card title="Нажатия кнопок" description="Десять самых нажимаемых кнопок.">
-          <BarList items={stats.buttons.map(([key, value]) => ({ key, label: key, value }))} total={summary.clicks} unit={clicksUnit} />
-        </Card>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        {!project ? (
+        {project ? (
+          <Card title="Страницы" description="Где смотрели проект.">
+            <BarList items={stats.pages.map(([key, value]) => ({ key, label: PAGE_LABELS[key] ?? key, value }))} total={summary.views} unit={viewsUnit} />
+          </Card>
+        ) : (
           <Card title="Проекты" description="Рейтинг по просмотрам и доля каждого проекта. Название ведёт к статистике проекта.">
             <BarList items={stats.projectViews.map(([id, value]) => ({ key: id, label: projectName(id), value, href: projects.some((item) => item.id === id) ? `/stats/${id}` : undefined }))}
               total={stats.allSummary.views} unit={viewsUnit} />
           </Card>
-        ) : (
-          <Card title="Страницы" description="Где смотрели проект.">
-            <BarList items={stats.pages.map(([key, value]) => ({ key, label: PAGE_LABELS[key] ?? key, value }))} total={summary.views} unit={viewsUnit} />
-          </Card>
         )}
-        <Card title="Самые активные" description="Посетители с наибольшим числом просмотров.">
-          {stats.users.length === 0 ? <p className="py-6 text-center text-sm text-muted">Нет данных за выбранный период.</p> : (
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-muted"><tr><th className="pb-2 font-medium">Кто</th><th className="pb-2 font-medium">Роль</th><th className="pb-2 text-right font-medium">Просмотры</th><th className="pb-2 text-right font-medium">Нажатия</th></tr></thead>
-              <tbody className="tabular-nums">
-                {stats.users.map((item) => (
-                  <tr key={item.id} className="border-t border-line-soft">
-                    <td className="max-w-40 truncate py-2 text-body">{userName(item.id)}</td>
-                    <td className="py-2 text-muted">{item.role === 'admin' ? 'Админ' : 'Пользователь'}</td>
-                    <td className="py-2 text-right">{item.views.toLocaleString('ru-RU')}</td>
-                    <td className="py-2 text-right">{item.clicks.toLocaleString('ru-RU')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
       </div>
 
       {!project && stats.pages.length > 0 && (

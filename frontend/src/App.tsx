@@ -45,17 +45,6 @@ function HomePage() {
   return isAdmin(user) ? <ProjectsPage /> : <ObjectsPage />;
 }
 
-function NewProjectPage() {
-  return (
-    <section className="rounded-2xl border border-line bg-surface p-6 text-body">
-      <h1 className="text-2xl font-bold">Создать проект</h1>
-      <p className="mt-2 text-muted">
-        Здесь позже появится форма создания проекта.
-      </p>
-    </section>
-  );
-}
-
 export default function App() {
   return (
     <>
@@ -72,7 +61,7 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="/workspace" element={<WorkspacePage />} />
               <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
-              <Route path="/projects/new" element={<NewProjectPage />} />
+              <Route path="/projects/new" element={<Navigate to="/?create=project" replace />} />
               <Route path="/projects/:projectId" element={<ProjectPage />} />
               <Route path="/projects/:projectId/map" element={<ProjectMapPage />} />
               <Route

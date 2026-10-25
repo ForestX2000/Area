@@ -36,7 +36,7 @@ async function seed(page: Page) {
   await page.evaluate(async (image) => {
     const blob = await (await fetch(`data:image/png;base64,${image}`)).blob()
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('space-map-db', 1)
+      const request = indexedDB.open('space-map-db')
       request.onupgradeneeded = () => request.result.createObjectStore('map-images')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -145,9 +145,9 @@ test('a user opens an object in 2D and 3D, follows a navigation marker and the v
   const sources = page.getByRole('region', { name: 'Источники переходов' })
   await expect(sources.getByText('Список объектов', { exact: true })).toBeVisible()
   await expect(sources.getByText('Навигационная метка', { exact: true })).toHaveCount(0)
-  const buttons = page.getByRole('region', { name: 'Нажатия кнопок' })
-  await expect(buttons.getByText('Открыть в 2D', { exact: true })).toBeVisible()
-  await expect(buttons.getByText('Открыть панораму 360°', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Нажатия кнопок' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Самые активные' })).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('space-map-analytics')!).some((event: { type: string }) => event.type === 'click'))).toBe(false)
   await expect(page.getByRole('region', { name: 'Доля проекта' }).getByRole('meter', { name: 'Доля просмотров' })).toBeVisible()
   await page.goto('/stats/store')
   await expect(page.getByRole('region', { name: 'Источники переходов' }).getByText('Навигационная метка', { exact: true })).toBeVisible()
@@ -169,14 +169,18 @@ test('statistics show totals, the project share and filter by source', async ({ 
   const tile = (label: string) => page.getByRole('group', { name: label, exact: true })
   await expect(tile('Просмотры')).toContainText('3')
   await expect(tile('Уникальные посетители')).toContainText('2')
-  await expect(tile('Нажатия кнопок')).toContainText('2')
+  await expect(tile('Нажатия кнопок')).toHaveCount(0)
   await expect(tile('Открытия панорам')).toContainText('1')
   await expect(page.getByRole('meter', { name: 'Доля просмотров' })).toHaveAttribute('aria-valuenow', '75')
   await expect(page.getByText('1 из 2')).toBeVisible()
+  // Посещаемость всего сайта за сегодня не зависит от проекта и фильтров.
+  const today = page.getByRole('region', { name: 'Сегодня на сайте' })
+  const todayViews = await tile('Просмотры сегодня').textContent()
+  expect(Number(todayViews!.match(/\d+/)![0])).toBeGreaterThanOrEqual(4)
 
   await page.getByLabel('Источник', { exact: true }).selectOption('utm:telegram')
   await expect(tile('Просмотры')).toContainText('1')
-  await expect(tile('Нажатия кнопок')).toContainText('1')
+  await expect(today.getByRole('group', { name: 'Просмотры сегодня', exact: true })).toHaveText(todayViews!)
   await expect(page.getByRole('region', { name: 'Источники переходов' }).getByText('Кампания «telegram»', { exact: true })).toBeVisible()
 
   await page.getByLabel('Проект', { exact: true }).selectOption('')
@@ -214,7 +218,7 @@ test('the dark theme keeps the palette and persists after reload', async ({ page
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 })
 
-test('profile changes the name, password and a cropped avatar', async ({ page }) => {
+test('profile changes the name and password; a regular user has no photo', async ({ page }) => {
   await signIn(page, VIEWER)
   await page.getByRole('link', { name: 'Профиль: Мария' }).click()
   await page.getByRole('textbox', { name: 'Имя', exact: true }).fill('Мария Иванова')
@@ -231,6 +235,26 @@ test('profile changes the name, password and a cropped avatar', async ({ page })
   await passwords.getByRole('button', { name: 'Сменить пароль' }).click()
   await expect(passwords.getByRole('status')).toHaveText('Пароль изменён.')
 
+  await expect(page.getByLabel('Загрузить фото профиля')).toHaveCount(0)
+  // Фото, сохранённое до запрета, у обычного пользователя не показывается.
+  await page.evaluate(() => {
+    const accounts = JSON.parse(localStorage.getItem('space-map-accounts')!)
+    for (const account of accounts) if (account.email === 'user@spacemap.ru') account.avatar = 'data:image/png;base64,iVBORw0KGgo='
+    localStorage.setItem('space-map-accounts', JSON.stringify(accounts))
+    const session = JSON.parse(localStorage.getItem('space-map-demo-user')!)
+    localStorage.setItem('space-map-demo-user', JSON.stringify({ ...session, avatar: 'data:image/png;base64,iVBORw0KGgo=' }))
+  })
+  await page.reload()
+  await expect(page.getByRole('link', { name: 'Профиль: Мария Иванова' }).getByRole('img')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Выйти из аккаунта' }).first().click()
+  await signIn(page, { email: VIEWER.email, password: 'NewViewer1' })
+  await expect(page.getByRole('link', { name: 'Профиль: Мария Иванова' })).toBeVisible()
+})
+
+test('an administrator uploads a cropped profile photo', async ({ page }) => {
+  await signIn(page, ADMIN)
+  await page.getByRole('link', { name: 'Профиль: Иван' }).click()
   const photo = await page.evaluate(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 600
@@ -253,7 +277,7 @@ test('profile changes the name, password and a cropped avatar', async ({ page })
   await page.mouse.up()
   await crop.getByRole('button', { name: 'Сохранить аватар' }).click()
   await expect(crop).toHaveCount(0)
-  const avatar = page.getByRole('link', { name: 'Профиль: Мария Иванова' }).getByRole('img')
+  const avatar = page.getByRole('link', { name: 'Профиль: Иван' }).getByRole('img')
   await expect(avatar).toHaveAttribute('src', /^data:image\/jpeg;base64,/)
   const size = await avatar.evaluate((node: HTMLImageElement) => new Promise<number[]>((resolve) => {
     const image = new Image()
@@ -261,8 +285,18 @@ test('profile changes the name, password and a cropped avatar', async ({ page })
     image.src = node.src
   }))
   expect(size).toEqual([256, 256])
+})
 
-  await page.getByRole('button', { name: 'Выйти из аккаунта' }).first().click()
-  await signIn(page, { email: VIEWER.email, password: 'NewViewer1' })
-  await expect(page.getByRole('link', { name: 'Профиль: Мария Иванова' })).toBeVisible()
+test('the menu item opens the same project creation form as the header button', async ({ page }) => {
+  await signIn(page, ADMIN)
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Открыть меню' }).click()
+  await page.getByRole('navigation', { name: 'Главная навигация' }).getByRole('link', { name: 'Создать проект' }).click()
+  await page.getByLabel('Название проекта', { exact: true }).fill('Новый корпус')
+  await page.getByRole('button', { name: 'Создать проект', exact: true }).last().click()
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('heading', { name: 'Новый корпус' })).toBeVisible()
+  await page.goto('/projects/new')
+  await expect(page).toHaveURL('/?create=project')
+  await expect(page.getByLabel('Название проекта', { exact: true })).toBeVisible()
 })

@@ -53,7 +53,8 @@ async function fetchBlobWithETag(
       return null
     }
 
-    if (!response.ok) {
+    // Страница-заглушка или ошибка в HTML не должна перезаписать план или панораму в кэше.
+    if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) {
       return null
     }
 

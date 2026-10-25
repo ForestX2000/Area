@@ -56,7 +56,7 @@ test.beforeEach(async ({ page }) => {
     }
     const [red, blue, yellow] = await Promise.all([image('#d43a4f'), image('#2863c7'), image('#e7bb36')])
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('space-map-db', 1)
+      const request = indexedDB.open('space-map-db')
       request.onupgradeneeded = () => request.result.createObjectStore('map-images')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

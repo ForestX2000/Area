@@ -51,8 +51,8 @@ export default function WorkspacePage() {
 
   if (!active) return <section className="rounded-2xl border border-line bg-surface p-8 text-center">
     <h1 className="text-2xl font-bold text-ink">Пока нет Workspace</h1>
-    <p className="mt-3 text-muted">Workspace создаются в общем списке «Мои проекты».</p>
-    <Link to="/?create=workspace" className="mt-5 inline-flex rounded-lg bg-brand px-4 py-2 text-white">Перейти к созданию проекта</Link>
+    <p className="mt-3 text-muted">Сохранённые Workspace отображаются в общем списке «Мои проекты».</p>
+    <Link to="/" className="mt-5 inline-flex rounded-lg bg-brand px-4 py-2 text-white">К моим проектам</Link>
   </section>
 
   return (

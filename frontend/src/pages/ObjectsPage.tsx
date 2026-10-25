@@ -59,7 +59,7 @@ export default function ObjectsPage() {
             const floors = getFloors(project).length
             const has3D = withPanorama[project.id]
             return (
-              <li key={project.id} data-track-project={project.id}
+              <li key={project.id}
                 className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition hover:border-brand-border hover:shadow-lg">
                 <ProjectPreview projectId={project.id} name={project.name} drawings={project.drawings} />
                 <div className="flex flex-1 flex-col p-5">

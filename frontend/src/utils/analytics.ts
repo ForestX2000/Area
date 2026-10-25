@@ -1,7 +1,8 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import { getCurrentUser } from './auth'
 
-export type AnalyticsEventType = 'view' | 'click' | 'panorama'
+// Старые журналы могут содержать события 'click': они больше не записываются и не учитываются.
+export type AnalyticsEventType = 'view' | 'panorama'
 
 export interface AnalyticsEvent {
   id: string
@@ -16,7 +17,7 @@ export interface AnalyticsEvent {
   entry?: string
   projectId?: string
   mode?: '2d' | '3d'
-  /** Нажатая кнопка или открытая панорама. */
+  /** Открытая панорама. */
   target?: string
   demo?: true
 }
@@ -187,7 +188,6 @@ export function countBy(events: AnalyticsEvent[], key: (event: AnalyticsEvent) =
 export interface StatsSummary {
   views: number
   visitors: number
-  clicks: number
   panoramas: number
 }
 
@@ -196,7 +196,6 @@ export function summarize(events: AnalyticsEvent[]): StatsSummary {
   return {
     views: views.length,
     visitors: new Set(views.map((event) => event.userId)).size,
-    clicks: events.filter((event) => event.type === 'click').length,
     panoramas: events.filter((event) => event.type === 'panorama').length,
   }
 }
@@ -256,10 +255,6 @@ export function generateDemoEvents(projectIds: string[], userIds: { id: string; 
     ['objects-list', 42], ['direct', 14], ['workspace', 9], ['marker', 9],
     ['ref:yandex.ru', 9], ['utm:telegram', 8], ['ref:google.com', 5], ['utm:email', 4],
   ]
-  const buttons: [string, number][] = [
-    ['Открыть в 2D', 26], ['Открыть в 3D', 18], ['Выбрать точку', 16], ['Открыть панораму', 12],
-    ['Панорама точки', 8], ['Сбросить вид', 6], ['Увеличить масштаб панорамы', 6], ['Этаж', 5], ['Режим 3D', 5],
-  ]
   const events: AnalyticsEvent[] = []
   const today = startOfDay(now)
   for (let daysAgo = 29; daysAgo >= 0; daysAgo--) {
@@ -277,10 +272,6 @@ export function generateDemoEvents(projectIds: string[], userIds: { id: string; 
       const entry = pick(random, sources)
       const base = { userId: person.id, role: person.role, projectId, page: 'viewer', mode, entry, demo: true } as const
       events.push({ ...base, id: eventId(), ts, type: 'view', source: entry })
-      const clicks = Math.floor(random() * 4)
-      for (let click = 0; click < clicks; click++) {
-        events.push({ ...base, id: eventId(), ts: ts + (click + 1) * 15000, type: 'click', source: 'in-app', target: pick(random, buttons) })
-      }
       if (mode === '3d' || random() < 0.2) {
         events.push({ ...base, id: eventId(), ts: ts + 5000, type: 'panorama', source: 'in-app', mode: '3d', target: 'Панорама' })
       }

@@ -112,7 +112,7 @@ export default function ProfilePage() {
             {createdAt && <span>С нами с {new Date(createdAt).toLocaleDateString('ru-RU')}</span>}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:items-end">
+        {isAdmin(user) && <div className="flex flex-col gap-2 sm:items-end">
           <label className="cursor-pointer rounded-lg border border-brand-border px-4 py-2 text-center text-sm font-semibold text-brand transition hover:bg-brand-soft focus-within:ring-2 focus-within:ring-brand">
             {user.avatar ? 'Сменить фото' : 'Загрузить фото'}
             <input type="file" accept="image/*" aria-label="Загрузить фото профиля" className="sr-only"
@@ -131,19 +131,20 @@ export default function ProfilePage() {
             </button>
           )}
           <Message status={avatarStatus} />
-        </div>
+        </div>}
       </section>
 
-      <Section title="Имя" description="Так вас видят в шапке сайта и в статистике.">
-        <form onSubmit={handleName} className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <label className="flex-1">
-            <span className="sr-only">Имя</span>
-            <input aria-label="Имя" value={name} maxLength={80} onChange={(event) => { setName(event.target.value); setNameStatus(null) }} className={inputClass} />
-          </label>
-          <button type="submit" className={primaryClass}>Сохранить имя</button>
+      <section aria-label="Имя" className="rounded-2xl border border-line bg-surface px-4 py-3 sm:px-5">
+        <form onSubmit={handleName} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <label htmlFor="profile-name" className="text-sm font-semibold text-ink">Имя</label>
+          <input id="profile-name" aria-label="Имя" value={name} maxLength={80} title="Так вас видят в шапке сайта и в статистике"
+            onChange={(event) => { setName(event.target.value); setNameStatus(null) }}
+            className="min-w-0 flex-1 basis-48 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-sm text-body outline-none transition focus:border-brand focus:ring-4 focus:ring-brand-soft" />
+          <button type="submit" disabled={!name.trim() || name.trim() === user.name}
+            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50">Сохранить имя</button>
+          <Message status={nameStatus} />
         </form>
-        <div className="mt-2"><Message status={nameStatus} /></div>
-      </Section>
+      </section>
 
       <Section title="Почта" description="Новая почта станет логином. Для подтверждения введите текущий пароль.">
         <form onSubmit={handleEmail} className="grid gap-3 sm:grid-cols-2">

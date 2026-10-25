@@ -18,7 +18,8 @@ const ADMIN_LINKS = [
   { to: "/", icon: "▦", label: "Проекты", end: true },
   { to: "/workspace", icon: "▧", label: "2D Workspace" },
   { to: "/stats", icon: "◔", label: "Статистика" },
-  { to: "/projects/new", icon: "＋", label: "Создать проект" },
+  // Ссылка с параметром открывает форму на странице проектов; подсвечивать её как текущую не нужно.
+  { to: "/?create=project", icon: "＋", label: "Создать проект", plain: true },
   { to: "/profile", icon: "◉", label: "Профиль" },
 ];
 
@@ -151,7 +152,8 @@ export default function Header() {
 
             <div className="space-y-2">
               {(admin ? ADMIN_LINKS : USER_LINKS).map((link) => (
-                <NavLink key={link.to} to={link.to} end={link.end} onClick={() => setMenuOpen(false)} className={navClass}>
+                <NavLink key={link.to} to={link.to} end={link.end} onClick={() => setMenuOpen(false)}
+                  className={"plain" in link ? navClass({ isActive: false }) : navClass}>
                   <span aria-hidden="true">{link.icon}</span>
                   {link.label}
                 </NavLink>

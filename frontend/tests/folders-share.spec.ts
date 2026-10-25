@@ -24,7 +24,7 @@ test('Workspace is created from the top bar and holds maps added inside it', asy
   await page.goto('/')
   const filters = page.getByRole('navigation', { name: 'Фильтр проектов' })
   await filters.getByRole('button', { name: 'Workspace', exact: true }).click()
-  await expect(page.getByText('Нету Workspace')).toBeVisible()
+  await expect(page.getByText('Нет Workspace')).toBeVisible()
 
   await page.getByRole('button', { name: '+ Workspace', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Создание Workspace' })).toBeVisible()

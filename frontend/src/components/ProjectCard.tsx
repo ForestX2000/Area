@@ -12,6 +12,7 @@ type ProjectCardProps = {
   floorsCount: number;
   drawings?: DrawingObject[];
   onDelete?: () => void;
+  onShare?: () => void;
   workspace?: Workspace;
   projects?: Project[];
   /** Просмотры карты за последние 30 дней и доля от всех просмотров карт. */
@@ -26,6 +27,7 @@ function ProjectCard({
   floorsCount,
   drawings,
   onDelete,
+  onShare,
   workspace, projects = [], stats,
 }: ProjectCardProps) {
   return (
@@ -64,7 +66,7 @@ function ProjectCard({
           to={workspace ? `/workspace/${id}` : `/projects/${id}`}
           className="project-open mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-[13px] font-normal leading-normal text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-border"
         >
-          {workspace ? 'Открыть Workspace' : 'Открыть проект'} <span aria-hidden="true">→</span>
+          {workspace ? 'Открыть Workspace' : 'Открыть карту'} <span aria-hidden="true">→</span>
         </Link>
         {!workspace && (
           <Link to={`/stats/${id}`} aria-label={`Посмотреть статистику: ${name}`}
@@ -73,12 +75,16 @@ function ProjectCard({
             {stats && <span className="text-xs text-muted">{stats.views.toLocaleString('ru-RU')} просм. · {Math.round(stats.share * 100)}%</span>}
           </Link>
         )}
-        {onDelete && (
+        {(onDelete || onShare) && (
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
-            <button type="button" onClick={onDelete}
+            {onShare ? <button type="button" onClick={onShare} aria-label={`Поделиться картой: ${name}`}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-brand transition hover:bg-brand-soft">
+              Поделиться
+            </button> : <span />}
+            {onDelete && <button type="button" onClick={onDelete}
               className="rounded-lg px-3 py-2 text-xs font-semibold text-muted transition hover:bg-brand-soft hover:text-brand">
               Удалить
-            </button>
+            </button>}
           </div>
         )}
       </div>

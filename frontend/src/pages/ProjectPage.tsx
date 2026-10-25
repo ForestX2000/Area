@@ -57,7 +57,7 @@ export default function ProjectPage() {
     event.preventDefault()
 
     if (!project || !name.trim()) {
-      setError('Введи название проекта.')
+      setError('Введи название карты.')
       return
     }
 
@@ -159,7 +159,7 @@ export default function ProjectPage() {
         onCancel={(event) => { event.preventDefault(); setEditingField(null) }}
         className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-y-auto rounded-2xl border border-line bg-surface p-6 text-body shadow-xl backdrop:bg-black/35 sm:p-8">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="edit-project-title" className="text-xl font-bold text-ink">Редактирование проекта</h2>
+          <h2 id="edit-project-title" className="text-xl font-bold text-ink">Редактирование карты</h2>
           <button type="button" aria-label="Закрыть окно редактирования" onClick={() => setEditingField(null)}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-brand-soft hover:text-brand">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -170,7 +170,7 @@ export default function ProjectPage() {
         <form onSubmit={handleSubmit} className="mt-4 grid gap-4">
           <div className="grid gap-1">
             <label htmlFor="edit-project-name" className="text-sm font-medium">
-              Название проекта
+              Название карты
             </label>
             <input
               id="edit-project-name"

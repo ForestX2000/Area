@@ -19,7 +19,7 @@ const ADMIN_LINKS = [
   { to: "/workspace", icon: "▧", label: "2D Workspace" },
   { to: "/stats", icon: "◔", label: "Статистика" },
   // Ссылка с параметром открывает форму на странице проектов; подсвечивать её как текущую не нужно.
-  { to: "/?create=project", icon: "＋", label: "Создать проект", plain: true },
+  { to: "/?create=project", icon: "＋", label: "Создать карту", plain: true },
   { to: "/profile", icon: "◉", label: "Профиль" },
 ];
 
@@ -83,7 +83,7 @@ export default function Header() {
             {admin && location.pathname === "/" && (
               <button
                 type="button"
-                aria-label="Создать проект"
+                aria-label="Создать карту"
                 onClick={() =>
                   window.dispatchEvent(
                     new CustomEvent("space-map:toggle-project-form"),
@@ -92,7 +92,7 @@ export default function Header() {
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover sm:px-4"
               >
                 <span className="text-lg leading-none">+</span>
-                <span className="hidden sm:inline">Создать проект</span>
+                <span className="hidden sm:inline">Создать карту</span>
               </button>
             )}
 

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { createWorkspace, getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
 import { getFloors } from '../utils/floorStorage';
 import ProjectCard from "../components/ProjectCard";
+import ShareDialog from "../components/ShareDialog";
 import { useConfirmation } from '../contexts/useConfirmation';
 import { countBy, filterEvents, useAnalyticsEvents } from '../utils/analytics';
 import type { Project } from "../types/project";
@@ -24,6 +25,7 @@ function ProjectsPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchParams, setSearchParams] = useSearchParams();
   const [formKind, setFormKind] = useState<FormKind | null>(null);
+  const [sharedProject, setSharedProject] = useState<Project | null>(null);
   // Пункт меню «Создать проект» ведёт на /?create=project — форма открывается так же, как по кнопке в шапке.
   const formOpen = formKind !== null || searchParams.has("create");
   const activeFormKind: FormKind = formKind ?? 'project';
@@ -73,7 +75,7 @@ function ProjectsPage() {
     event.preventDefault();
 
     if (!name.trim()) {
-      setError(activeFormKind === 'workspace' ? "Введи название Workspace." : "Введи название проекта.");
+      setError(activeFormKind === 'workspace' ? "Введи название Workspace." : "Введи название карты.");
       return;
     }
 
@@ -101,7 +103,7 @@ function ProjectsPage() {
       closeForm();
     } catch {
       setError(
-        "Не удалось сохранить проект. Проверь доступное место в браузере.",
+        "Не удалось сохранить карту. Проверь доступное место в браузере.",
       );
     }
   }
@@ -122,7 +124,7 @@ function ProjectsPage() {
       setProjects(updatedProjects);
       setError("");
     } catch {
-      setError("Не удалось удалить проект. Попробуй ещё раз.");
+      setError("Не удалось удалить карту. Попробуй ещё раз.");
     }
   }
 
@@ -142,13 +144,16 @@ function ProjectsPage() {
 
   const projectWord =
     projects.length === 1
-      ? "проект"
+      ? "карта"
       : projects.length >= 2 && projects.length <= 4
-        ? "проекта"
-        : "проектов";
+        ? "карты"
+        : "карт";
 
   const showMaps = filter !== 'workspace';
   const showWorkspaces = filter !== 'map';
+  // Отдельные карты: те, что не входят ни в один Workspace.
+  const standaloneProjects = projects.filter((project) =>
+    !workspaces.workspaces.some((workspace) => workspace.nodes.some((node) => node.projectId === project.id)));
 
   return (
     <div className="min-h-screen bg-page text-body">
@@ -208,10 +213,10 @@ function ProjectsPage() {
           <section className="mb-9 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-5 sm:px-7">
               <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand">
-                {activeFormKind === 'workspace' ? 'Новый Workspace' : 'Новый объект'}
+                {activeFormKind === 'workspace' ? 'Новый Workspace' : 'Новая карта'}
               </p>
               <h3 className="text-lg font-bold text-body">
-                {activeFormKind === 'workspace' ? 'Создание Workspace' : 'Создание проекта'}
+                {activeFormKind === 'workspace' ? 'Создание Workspace' : 'Создание карты'}
               </h3>
               <p className="mt-1 text-sm text-muted">
                 {activeFormKind === 'workspace'
@@ -224,7 +229,7 @@ function ProjectsPage() {
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-body">
-                    {activeFormKind === 'workspace' ? 'Название Workspace' : 'Название проекта'}
+                    {activeFormKind === 'workspace' ? 'Название Workspace' : 'Название карты'}
                   </span>
                   <input
                     id="project-name"
@@ -271,7 +276,7 @@ function ProjectsPage() {
                   type="submit"
                   className="rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
                 >
-                  {activeFormKind === 'workspace' ? 'Создать Workspace' : 'Создать проект'}
+                  {activeFormKind === 'workspace' ? 'Создать Workspace' : 'Создать карту'}
                 </button>
               </div>
             </form>
@@ -295,7 +300,7 @@ function ProjectsPage() {
             </div>
 
             <h3 className="text-xl font-bold text-body">
-              Начни с первого проекта
+              Начни с первой карты
             </h3>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
               Создай пространство, загрузи план помещения и отметь места, к
@@ -308,7 +313,7 @@ function ProjectsPage() {
                 onClick={() => openForm('project')}
                 className="mt-6 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
               >
-                + Создать первый проект
+                + Создать первую карту
               </button>
             )}
           </section>
@@ -317,7 +322,7 @@ function ProjectsPage() {
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-body">Все проекты</h3>
               <span className="text-xs text-muted">
-                {(filter === 'map' ? projects.length : filter === 'workspace' ? workspaces.workspaces.length : projects.length + workspaces.workspaces.length)} в списке
+                {(filter === 'map' ? standaloneProjects.length : filter === 'workspace' ? workspaces.workspaces.length : standaloneProjects.length + workspaces.workspaces.length)} в списке
               </span>
             </div>
 
@@ -325,7 +330,7 @@ function ProjectsPage() {
               {showWorkspaces && workspaces.workspaces.map((workspace) => <ProjectCard key={`workspace-${workspace.id}`}
                 id={workspace.id} name={workspace.name} description={workspace.description || 'Общее пространство для карт.'} buildingsCount={0} floorsCount={0}
                 workspace={workspace} projects={projects} onDelete={() => handleDeleteWorkspace(workspace.id)} />)}
-              {showMaps && projects.map((project) => (
+              {showMaps && standaloneProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   id={project.id}
@@ -336,14 +341,16 @@ function ProjectsPage() {
                   drawings={project.drawings}
                   stats={{ views: viewStats.byProject.get(project.id) ?? 0, share: viewStats.total ? (viewStats.byProject.get(project.id) ?? 0) / viewStats.total : 0 }}
                   onDelete={() => handleDelete(project.id)}
+          onShare={() => setSharedProject(project)}
                 />
               ))}
             </div>
-            {filter === 'workspace' && workspaces.workspaces.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Нету Workspace. Создай его кнопкой «+ Workspace» вверху.</p>}
-            {filter === 'map' && projects.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В этой категории пока нет проектов.</p>}
+            {filter === 'workspace' && workspaces.workspaces.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Нет Workspace. Создай его кнопкой «+ Workspace» вверху.</p>}
+            {filter === 'map' && standaloneProjects.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В этой категории пока нет карт.</p>}
           </section>
         )}
       </div>
+      {sharedProject && <ShareDialog project={sharedProject} onClose={() => setSharedProject(null)} />}
     </div>
   );
 }

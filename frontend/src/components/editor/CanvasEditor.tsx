@@ -58,6 +58,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   const viewportRef = useRef({ zoom, pan: { x: 0, y: 0 } })
   const touchesRef = useRef(new Map<number, Point>())
   const touchNavigationRef = useRef(false)
+  const longPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; pointerId: number; start: Point } | null>(null)
   const pinchRef = useRef<{ distance: number; midpoint: Point; zoom: number; pan: Point } | null>(null)
   const touchStartRef = useRef<{ selection: string[]; polygon: typeof polygon } | null>(null)
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
@@ -89,8 +90,17 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
     rotation: selectedObjects.length === 1 ? selectedObjects[0].rotation ?? 0 : 0,
   }
 
+  function cancelLongPress() {
+    if (longPressRef.current) clearTimeout(longPressRef.current.timer)
+    longPressRef.current = null
+  }
+
   useLayoutEffect(() => { viewportRef.current.zoom = zoom }, [zoom])
-  useEffect(() => { lastClickRef.current = null }, [tool])
+  useEffect(() => {
+    lastClickRef.current = null
+    cancelLongPress()
+    return () => cancelLongPress()
+  }, [tool, panMode, multiSelect])
 
   useEffect(() => {
     const svg = svgRef.current
@@ -222,6 +232,21 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
       return
     }
     const point = svgPoint(event)
+    if (event.pointerType === 'touch' && onContextMenu && tool !== 'polygon'
+      && !(event.target as Element).closest('[data-rotation-handle], [data-resize-handle], [data-vertex-handle]')) {
+      const object = findObject(point)
+      if (object) {
+        cancelLongPress()
+        const { clientX, clientY, pointerId } = event
+        longPressRef.current = { pointerId, start: { x: clientX, y: clientY }, timer: setTimeout(() => {
+          longPressRef.current = null
+          // Opening a menu cancels the move preview and creates no drawing edit.
+          clearGesture(true)
+          onSelect(selectedIds.includes(object.id) ? selectedIds : [object.id], tool !== 'vertices')
+          onContextMenu({ clientX, clientY, point, objectId: object.id })
+        }, 500) }
+      }
+    }
     if ((event.target as Element).closest('[data-rotation-handle]') && selectedObjects.length > 0) {
       lastClickRef.current = null
       clickCandidateRef.current = null
@@ -346,6 +371,9 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
+    const longPress = longPressRef.current
+    if (longPress?.pointerId === event.pointerId
+      && Math.hypot(event.clientX - longPress.start.x, event.clientY - longPress.start.y) > 8) cancelLongPress()
     if (event.pointerType === 'touch' && touchesRef.current.has(event.pointerId)) {
       touchesRef.current.set(event.pointerId, svgPoint(event, false))
       if (touchNavigationRef.current) {
@@ -384,6 +412,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function clearGesture(cancelled = false) {
+    cancelLongPress()
     const gesture = gestureRef.current
     if (cancelled && gesture?.kind === 'marquee') onSelect(gesture.previousSelection)
     gestureRef.current = null
@@ -396,6 +425,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
+    if (longPressRef.current?.pointerId === event.pointerId) cancelLongPress()
     touchesRef.current.delete(event.pointerId)
     if (touchNavigationRef.current) {
       pinchRef.current = null
@@ -439,6 +469,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
   }
 
   function cancelPointer(event: PointerEvent<SVGSVGElement>) {
+    if (longPressRef.current?.pointerId === event.pointerId) cancelLongPress()
     touchesRef.current.delete(event.pointerId)
     if (touchNavigationRef.current) {
       pinchRef.current = null
@@ -493,6 +524,10 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
         className={`w-full h-full block touch-none select-none outline-none ${isPanning ? 'cursor-grabbing' : panMode ? 'cursor-grab' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
         onContextMenu={(event) => {
+          event.preventDefault()
+          // Touch menus are opened by the hold timer; native long-press menus
+          // must not run mouse-only actions such as deleting a ruler.
+          if (touchesRef.current.size > 0 || (event.nativeEvent as globalThis.PointerEvent).pointerType === 'touch') return
           const gesture = gestureRef.current
           const drawingRuler = gesture?.kind === 'draw' && gesture.tool === 'dimension'
           const targetId = (event.target as Element).closest('[data-object-id]')?.getAttribute('data-object-id')

@@ -44,7 +44,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-line bg-surface">
-        <div className="flex min-h-[72px] items-center gap-3 px-4 sm:px-6">
+        <div className="flex min-h-16 items-center gap-1.5 px-2 sm:gap-3 sm:px-6 lg:min-h-[72px]">
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
@@ -111,7 +111,8 @@ export default function Header() {
                   aria-label="Выйти из аккаунта"
                   className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-body transition hover:border-brand-border hover:bg-brand-soft hover:text-brand"
                 >
-                  Выйти
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 sm:hidden" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 4H4v16h5M13 7l5 5-5 5M8 12h12" /></svg>
+                  <span className="hidden sm:inline">Выйти</span>
                 </button>
               </>
             )}

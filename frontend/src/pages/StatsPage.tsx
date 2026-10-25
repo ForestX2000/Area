@@ -103,7 +103,7 @@ export default function StatsPage() {
       <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           {project && <Link to="/stats" className="text-sm text-muted hover:text-brand">← Вся статистика</Link>}
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">{project ? `Статистика: ${project.name}` : 'Статистика'}</h1>
+          <h1 className="mt-1 break-words text-2xl font-bold tracking-tight text-ink sm:text-3xl">{project ? `Статистика: ${project.name}` : 'Статистика'}</h1>
           <p className="mt-2 text-sm text-muted">
             {project ? 'Посещаемость проекта, источники переходов и его доля среди всех проектов.' : 'Посещаемость сайта и источники переходов. Выберите проект, чтобы посмотреть его отдельно.'}
           </p>
@@ -121,10 +121,10 @@ export default function StatsPage() {
       </section>
 
       <div role="group" aria-label="Фильтры" className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 rounded-lg border border-brand-border bg-brand-soft py-1 pl-3 pr-1 text-sm font-semibold text-brand">
+        <label className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-brand-border bg-brand-soft py-1 pl-3 pr-1 text-sm font-semibold text-brand">
           Проект
           <select aria-label="Проект" value={projectId ?? ''} onChange={(event) => navigate(event.target.value ? `/stats/${event.target.value}` : '/stats')}
-            className="max-w-64 rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-normal text-body">
+            className="min-w-0 max-w-64 rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-normal text-body">
             <option value="">Все проекты</option>
             {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>

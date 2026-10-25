@@ -75,7 +75,7 @@ function ProjectsPage() {
     event.preventDefault();
 
     if (!name.trim()) {
-      setError(activeFormKind === 'workspace' ? "Введи название Workspace." : "Введи название карты.");
+      setError(activeFormKind === 'workspace' ? "Введите название Workspace." : "Введите название проекта.");
       return;
     }
 
@@ -88,7 +88,7 @@ function ProjectsPage() {
         resetForm();
         closeForm();
       } catch {
-        setError("Не удалось создать Workspace. Проверь доступное место в браузере.");
+        setError("Не удалось создать Workspace. Проверьте доступное место в браузере.");
       }
       return;
     }
@@ -103,7 +103,7 @@ function ProjectsPage() {
       closeForm();
     } catch {
       setError(
-        "Не удалось сохранить карту. Проверь доступное место в браузере.",
+        "Не удалось сохранить проект. Проверьте доступное место в браузере.",
       );
     }
   }
@@ -124,7 +124,7 @@ function ProjectsPage() {
       setProjects(updatedProjects);
       setError("");
     } catch {
-      setError("Не удалось удалить карту. Попробуй ещё раз.");
+      setError("Не удалось удалить проект. Повторите попытку.");
     }
   }
 
@@ -158,21 +158,13 @@ function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-page text-body">
-      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <div className="mx-auto max-w-[1400px] py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <section className="mb-9">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">
-            Твоё пространство
-          </p>
-
           <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-body sm:text-4xl">
                 Мои проекты
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-                Организуй здания, планы помещений и панорамы в одном месте.
-                Выбирай проект и продолжай работу с интерактивной картой.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -213,17 +205,9 @@ function ProjectsPage() {
         {formOpen && (
           <section className="mb-9 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-5 sm:px-7">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand">
-                {activeFormKind === 'workspace' ? 'Новый Workspace' : 'Новая карта'}
-              </p>
               <h3 className="text-lg font-bold text-body">
                 {activeFormKind === 'workspace' ? 'Создание Workspace' : 'Создание карты'}
               </h3>
-              <p className="mt-1 text-sm text-muted">
-                {activeFormKind === 'workspace'
-                  ? 'Workspace — пространство, куда ты добавишь карты.'
-                  : 'Укажи название и при необходимости добавь описание пространства.'}
-              </p>
             </div>
 
             <form className="grid gap-5 p-5 sm:p-7" onSubmit={handleSubmit}>
@@ -255,7 +239,7 @@ function ProjectsPage() {
                     id="project-description"
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
-                    placeholder="Кратко опиши пространство"
+                    placeholder="Описание проекта"
                     maxLength={1000}
                     className={inputClass}
                   />
@@ -301,12 +285,8 @@ function ProjectsPage() {
             </div>
 
             <h3 className="text-xl font-bold text-body">
-              Начни с первой карты
+              Нет проектов
             </h3>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
-              Создай пространство, загрузи план помещения и отметь места, к
-              которым хочешь прикрепить панорамы.
-            </p>
 
             {!formOpen && (
               <button
@@ -314,7 +294,7 @@ function ProjectsPage() {
                 onClick={() => openForm('project')}
                 className="mt-6 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-4 focus:ring-brand-soft"
               >
-                + Создать первую карту
+                + Создать проект
               </button>
             )}
           </section>
@@ -322,14 +302,11 @@ function ProjectsPage() {
           <section>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-body">Все проекты</h3>
-              <span className="text-xs text-muted">
-                {(filter === 'map' ? standaloneProjects.length : filter === 'workspace' ? workspaces.workspaces.length : projects.length + workspaces.workspaces.length)} в списке
-              </span>
             </div>
 
             <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 2xl:grid-cols-3">
               {showWorkspaces && workspaces.workspaces.map((workspace) => <ProjectCard key={`workspace-${workspace.id}`}
-                id={workspace.id} name={workspace.name} description={workspace.description || 'Общее пространство для карт.'} buildingsCount={0} floorsCount={0}
+                id={workspace.id} name={workspace.name} description={workspace.description ?? ''} buildingsCount={0} floorsCount={0}
                 workspace={workspace} projects={projects} onDelete={() => handleDeleteWorkspace(workspace.id)} />)}
               {showMaps && mapsToShow.map((project) => (
                 <ProjectCard
@@ -346,8 +323,8 @@ function ProjectsPage() {
                 />
               ))}
             </div>
-            {filter === 'workspace' && workspaces.workspaces.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Нет Workspace. Создай его кнопкой «+ Workspace» вверху.</p>}
-            {filter === 'map' && standaloneProjects.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В этой категории пока нет карт.</p>}
+            {filter === 'workspace' && workspaces.workspaces.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Нет Workspace. Создайте его кнопкой «+ Workspace» вверху.</p>}
+            {filter === 'map' && projects.length === 0 && <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">В этой категории нет проектов.</p>}
           </section>
         )}
       </div>

@@ -127,7 +127,7 @@ function FloorPreview({ storageId, name, drawings = [], mode = 'content' }: Proj
             <circle cx="8" cy="9" r="1.5" />
             <path d="m3 17 5-5 4 4 4-6 5 7" />
           </svg>
-          <span className="text-xs">Добавьте план, панораму или чертёж</span>
+          <span className="text-xs">Нет плана</span>
         </div>
       )}
       <span className="absolute left-3 top-3 rounded-full border border-line bg-surface/95 px-3 py-1 text-xs font-medium text-body">

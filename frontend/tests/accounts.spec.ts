@@ -195,12 +195,12 @@ test('statistics show totals, the project share and filter by source', async ({ 
 test('demo statistics can be generated and removed', async ({ page }) => {
   await signIn(page, ADMIN)
   await page.goto('/stats')
-  await expect(page.getByRole('heading', { name: 'Статистика пока пуста' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нет посещений' })).toBeVisible()
   await page.getByRole('button', { name: 'Сгенерировать демо-данные' }).first().click()
-  await expect(page.getByRole('heading', { name: 'Статистика пока пуста' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Нет посещений' })).toHaveCount(0)
   await expect(page.getByRole('img', { name: /^Просмотры по дням: всего/ })).toBeVisible()
   await page.getByRole('button', { name: 'Удалить демо-данные' }).click()
-  await expect(page.getByRole('heading', { name: 'Статистика пока пуста' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нет посещений' })).toBeVisible()
 })
 
 test('the dark theme keeps the palette and persists after reload', async ({ page }) => {

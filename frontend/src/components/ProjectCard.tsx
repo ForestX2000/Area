@@ -48,9 +48,7 @@ function ProjectCard({
           {name}
         </h3>
 
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">
-          {description || "Описание проекта пока не добавлено."}
-        </p>
+        {description && <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{description}</p>}
 
         <div className="project-meta mt-4 flex flex-wrap gap-2">
           <span className="rounded-lg bg-page px-3 py-2 text-xs font-medium text-body">

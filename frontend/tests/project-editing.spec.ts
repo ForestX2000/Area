@@ -61,7 +61,7 @@ test('empty descriptions remain editable on a narrow screen', async ({ page }, t
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Описание', { exact: true }).fill('')
   await dialog.getByRole('button', { name: 'Сохранить изменения' }).click()
-  await expect(page.getByText('Описание пока не добавлено.')).toBeVisible()
+  await expect(page.getByText('Нет описания')).toBeVisible()
   await pencil.click()
   await expect(dialog.getByLabel('Описание', { exact: true })).toBeFocused()
   await expect(dialog.getByLabel('Описание', { exact: true })).toHaveValue('')

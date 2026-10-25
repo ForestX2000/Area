@@ -41,13 +41,13 @@ const POINT_CATEGORIES: {
   { value: "other", label: "Другое", icon: "●" },
 ];
 
-const STEPS = ["Поставь точку", "Выбери точку", "Добавь панораму"];
+const STEPS = ["Добавление точки", "Выбор точки", "Загрузка панорамы"];
 
 const STEP_HINTS = [
-  "Нажми на любое место плана — там появится точка",
-  "Выбери точку на плане или в списке объектов",
-  "Загрузи панораму 360° для выбранной точки в панели настроек",
-  "Готово! Добавляй новые точки или открой панораму",
+  "Нажмите на план, чтобы добавить точку",
+  "Выберите точку на плане или в списке объектов",
+  "Загрузите панораму 360° в настройках выбранной точки",
+  "Панорама загружена",
 ];
 
 function getCategoryLabel(category?: MapPointCategory) {
@@ -264,7 +264,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
       savePoints(storageId, updatedPoints);
       setError("");
     } catch {
-      setError("Не удалось сохранить точки. Проверь доступное место в браузере.");
+      setError("Не удалось сохранить точки. Проверьте доступное место в браузере.");
     }
   }
 
@@ -276,7 +276,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
     if (!file || !projectId) return;
 
     if (!file.type.startsWith("image/")) {
-      setError("Выбери файл изображения для плана.");
+      setError("Выберите файл изображения для плана.");
       return;
     }
 
@@ -290,7 +290,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
       setImageName(file.name);
     } catch {
-      setError("Не удалось сохранить план. Попробуй другой файл.");
+      setError("Не удалось сохранить план. Выберите другой файл.");
     } finally {
       setSaving(false);
     }
@@ -438,7 +438,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
     if (!projectId || !selectedPointId) return;
 
     if (!file.type.startsWith("image/")) {
-      setError("Выбери файл изображения для панорамы.");
+      setError("Выберите файл изображения для панорамы.");
       return;
     }
 
@@ -493,7 +493,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-line border-t-brand" />
           <p className="text-sm font-medium text-muted">
-            Загружаем пространство...
+            Загрузка проекта…
           </p>
         </div>
       </div>
@@ -692,7 +692,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
                           <span className="relative flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-brand text-lg text-white shadow">+</span>
                         </span>
-                        Нажми в любое место плана,<br />чтобы поставить первую точку
+                        Нажмите на план,<br />чтобы добавить точку
                       </div>
                     </div>
                   )}
@@ -702,7 +702,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                       style={{ left: `${hoverPosition.x}%`, top: `${hoverPosition.y}%` }}>
                       <span className="flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-white bg-brand/70 text-sm font-bold text-white shadow-md sm:h-9 sm:w-9">+</span>
                       <span className="absolute top-full mt-1 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs font-medium text-surface shadow">
-                        Нажми, чтобы добавить точку {points.length + 1}
+                        Добавить точку {points.length + 1}
                       </span>
                     </div>
                   )}
@@ -714,11 +714,10 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                   ▧
                 </div>
                 <h3 className="text-lg font-semibold">
-                  Начни с плана помещения
+                  План не добавлен
                 </h3>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-muted">
-                  Загрузи изображение этажа или помещения. Затем отмечай входы,
-                  залы, сервисные зоны и другие объекты.
+                  Загрузите изображение плана или создайте чертёж в редакторе.
                 </p>
                 <label className="mt-6 inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover">
                   Выбрать изображение
@@ -742,7 +741,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
 
           {hasPlan && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-5 py-4 text-xs text-muted sm:px-6">
-              <span>Выбери маркер, чтобы редактировать объект</span>
+              <span>Выберите маркер для редактирования</span>
               <span>Изменения сохраняются автоматически</span>
             </div>
           )}
@@ -804,13 +803,13 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                 <p className="text-sm font-medium">Пока нет объектов</p>
                 <p className="mx-auto mt-2 max-w-[230px] text-xs leading-5 text-muted">
                   {hasPlan
-                    ? "Нажми на план, чтобы добавить первую точку."
+                    ? "Нажмите на план, чтобы добавить точку."
                     : "Сначала загрузи план помещения."}
                 </p>
               </div>
             ) : filteredPoints.length === 0 ? (
               <p className="px-5 py-8 text-center text-sm text-muted">
-                Ничего не найдено. Попробуй другой запрос.
+                Ничего не найдено. Измените запрос.
               </p>
             ) : (
               <ul className="max-h-[360px] space-y-1 overflow-y-auto p-3">
@@ -973,7 +972,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
                         Панорама не добавлена
                       </p>
                       <p className="mt-1 text-xs leading-5 text-muted">
-                        Загрузи сферическое фото 360°, чтобы связать его с этой точкой.
+                        Загрузите панораму 360° для этой точки.
                       </p>
                     </div>
                   )}
@@ -1025,7 +1024,7 @@ function ProjectMap({ projectId, floorId }: { projectId?: string; floorId: strin
               <p className="mt-2 text-xs leading-5 text-muted">
                 {points.length === 0
                   ? "Сначала поставь точку на плане — здесь появятся её название, тип и панорама."
-                  : "Выбери точку в списке или нажми на маркер плана, чтобы изменить её данные."}
+                  : "Для редактирования выберите точку в списке или на плане."}
               </p>
             </section>
           )}

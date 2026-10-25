@@ -5,11 +5,16 @@ import CanvasEditor from '../components/editor/CanvasEditor'
 import EditorToolbar from '../components/editor/EditorToolbar'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
 import EditorNavigation from '../components/editor/EditorNavigation'
+import PanoramaViewer from '../components/PanoramaViewer'
+import PanoramaStitchDialog from '../components/PanoramaStitchDialog'
 import { addVertex, canAddVertex, canDeleteVertex, deleteVertex, objectLocalBounds, objectName, scaleDrawing } from '../components/editor/drawingGeometry'
 import type { DrawingObject, DrawingTool } from '../types/drawing'
 import { getProjects } from '../utils/projectStorage'
-import { getFloor, saveFloorDrawings } from '../utils/floorStorage'
+import { floorStorageId, getFloor, saveFloorDrawings } from '../utils/floorStorage'
 import { useProjectFloor } from '../utils/useProjects'
+import { deletePanorama, getPanorama, savePanorama } from '../utils/mapStorage'
+import { useObjectUrl } from '../utils/useObjectUrl'
+import { useConfirmation } from '../contexts/useConfirmation'
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -34,12 +39,19 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
   const [zoom, setZoom] = useState(1)
   const [selectedVertex, setSelectedVertex] = useState<number | null>(null)
   const [showServiceMarks, setShowServiceMarks] = useState(false)
+  const confirm = useConfirmation()
+  const storageId = floorStorageId(projectId ?? '', floorId)
+  const [viewer, setViewer] = useState<{ id: string; title: string } | null>(null)
+  const [viewerUrl, replaceViewerUrl] = useObjectUrl()
+  const [panoramaError, setPanoramaError] = useState('')
+  const [stitchOpen, setStitchOpen] = useState(false)
 
   const project = projectId
     ? getProjects().find((p) => p.id === projectId)
     : undefined
 
   const selected = objects.find((o) => o.id === selectedId) ?? null
+  const navigationPanoramas = objects.filter((object) => object.markerKind === 'navigation' && object.panoramaKey)
 
   useEffect(() => {
     if (!projectId) return
@@ -119,6 +131,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
 
   const handleSelect = useCallback((ids: string[], activateSelectionTool = false) => {
     setSelectedIds(ids)
+    setPanoramaError('')
     if (activateSelectionTool) setTool('select')
     setSelectedVertex(null)
   }, [])
@@ -141,6 +154,83 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     },
     [selectedId, objects, handleObjectsChange]
   )
+
+  // Loads the panorama of the open marker; a missing file closes the viewer instead of showing a blank sphere.
+  useEffect(() => {
+    if (!viewer) {
+      replaceViewerUrl()
+      return
+    }
+    let cancelled = false
+    replaceViewerUrl()
+    getPanorama(storageId, viewer.id)
+      .then((file) => {
+        if (cancelled) return
+        if (file) {
+          replaceViewerUrl(file)
+        } else {
+          setViewer(null)
+          setPanoramaError('Панорама не найдена. Загрузите её заново.')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setViewer(null)
+          setPanoramaError('Не удалось открыть панораму.')
+        }
+      })
+    return () => { cancelled = true }
+  }, [viewer, storageId, replaceViewerUrl])
+
+  // Changes only the given object, reading the latest state so async panorama work cannot overwrite edits.
+  const updateObject = useCallback((id: string, changes: Partial<DrawingObject>) => {
+    setHistory((previous) => ({
+      objects: previous.objects.map((object) => object.id === id ? { ...object, ...changes } : object),
+      past: [...previous.past.slice(-99), previous.objects],
+      future: [],
+    }))
+  }, [])
+
+  function openMarkerPanorama(object: DrawingObject) {
+    setPanoramaError('')
+    setViewer({ id: object.id, title: object.label || objectName(object) })
+  }
+
+  function activateMarker(object: DrawingObject) {
+    if (object.markerKind !== 'navigation') return
+    if (object.panoramaKey) openMarkerPanorama(object)
+    else if (object.targetProjectId) navigate(`/projects/${object.targetProjectId}/map`)
+  }
+
+  async function handleMarkerPanoramaUpload(file: File) {
+    if (!selected) return
+    if (!file.type.startsWith('image/')) {
+      setPanoramaError('Выберите файл изображения для панорамы.')
+      return
+    }
+    const id = selected.id
+    try {
+      await savePanorama(storageId, id, file)
+      setPanoramaError('')
+      updateObject(id, { panoramaKey: `panorama:${storageId}:${id}` })
+    } catch {
+      setPanoramaError('Не удалось сохранить панораму.')
+    }
+  }
+
+  async function handleMarkerPanoramaDelete() {
+    if (!selected) return
+    const confirmed = await confirm({ title: 'Удалить панораму?', message: 'Панорама этой метки будет удалена. Сама метка останется на чертеже.' })
+    if (!confirmed) return
+    const id = selected.id
+    try {
+      await deletePanorama(storageId, id)
+      setPanoramaError('')
+      updateObject(id, { panoramaKey: undefined })
+    } catch {
+      setPanoramaError('Не удалось удалить панораму.')
+    }
+  }
 
   if (!projectId || !project) {
     return (
@@ -165,8 +255,11 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
     <div className="bg-surface-muted">
       <EditorNavigation projectId={projectId} />
       <div className="grid overflow-hidden rounded-b-xl border border-line md:h-[calc(100dvh-12rem)] md:min-h-[38rem] md:grid-cols-[240px_minmax(0,1fr)_240px]">
-        <aside aria-label="Свойства и объекты" className="order-3 overflow-y-auto border-l border-line bg-white">
+        <aside aria-label="Свойства и объекты" className="order-3 overflow-y-auto border-l border-line bg-surface">
           <PropertiesPanel selected={selected} selectionCount={selectedIds.length} onUpdate={handleUpdate} onDelete={handleDelete}
+            panoramaError={panoramaError} onOpenPanorama={() => { if (selected) openMarkerPanorama(selected) }}
+            onUploadPanorama={handleMarkerPanoramaUpload} onDeletePanorama={handleMarkerPanoramaDelete}
+            onStitchPanorama={() => setStitchOpen(true)}
             selectedVertex={selectedVertex} onEditVertices={() => setTool('vertices')}
             onAddVertex={() => {
               if (!selected || !canAddVertex(selected)) return
@@ -197,7 +290,7 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
           <CanvasEditor objects={objects} onObjectsChange={handleObjectsChange} selectedIds={selectedIds} onSelect={handleSelect}
             tool={tool} gridSize={gridSize} snapToGrid={snapToGrid} zoom={zoom} onZoomChange={setZoom}
             selectedVertex={selectedVertex} onVertexSelect={setSelectedVertex} showServiceMarks={showServiceMarks}
-            onActivateMarker={(object) => { if (object.markerKind === 'navigation' && object.targetProjectId) navigate(`/projects/${object.targetProjectId}/map`) }} />
+            onActivateMarker={activateMarker} />
         </div>
         <aside aria-label="Панель инструментов" className="order-2 overflow-y-auto border-r border-line md:order-1">
           <EditorToolbar
@@ -219,6 +312,31 @@ function ProjectEditor({ projectId, floorId }: { projectId?: string; floorId: st
         </aside>
 
       </div>
+      {stitchOpen && selected && (
+        <PanoramaStitchDialog
+          title={selected.label || objectName(selected)}
+          onClose={() => setStitchOpen(false)}
+          onComplete={async (file) => {
+            await handleMarkerPanoramaUpload(file)
+            setStitchOpen(false)
+          }}
+        />
+      )}
+      {viewer && viewerUrl && (
+        <PanoramaViewer
+          key={viewerUrl}
+          imageUrl={viewerUrl}
+          title={viewer.title}
+          projectId={projectId}
+          pointId={viewer.id}
+          panoramas={navigationPanoramas.map((object) => ({ id: object.id, title: object.label || objectName(object) }))}
+          onSelectPanorama={(id) => {
+            const object = navigationPanoramas.find((item) => item.id === id)
+            if (object) openMarkerPanorama(object)
+          }}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </div>
   )
 }

@@ -15,6 +15,7 @@ export interface DrawingObject {
   markerKind?: MarkerKind
   description?: string
   targetProjectId?: string
+  panoramaKey?: string
   status?: 'ready' | 'progress' | 'blocked'
   points: Point[]
   rotation?: number

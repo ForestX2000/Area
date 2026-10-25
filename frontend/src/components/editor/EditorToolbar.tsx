@@ -17,9 +17,9 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     if (zoomInput?.trim() && Number.isFinite(Number(zoomInput))) props.onZoomChange(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(zoomInput) / 100)))
     setZoomInput(null)
   }
-  const inputClass = 'w-20 rounded-xl border border-line bg-surface-muted px-2 py-1.5 text-sm outline-none focus:border-brand focus:bg-white'
+  const inputClass = 'w-20 rounded-xl border border-line bg-surface-muted px-2 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface'
   const buttonClass = 'rounded-lg border border-line px-3 py-2 text-sm enabled:hover:bg-surface-muted disabled:opacity-40'
-  return <div className="flex min-h-full flex-col gap-4 bg-white p-3">
+  return <div className="flex min-h-full flex-col gap-4 bg-surface p-3">
     <section aria-label="Инструменты и фигуры">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Инструменты</h2>
       <div className="grid grid-cols-2 gap-1.5">{SHAPE_TOOLS.map((item) =>

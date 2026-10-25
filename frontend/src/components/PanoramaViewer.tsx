@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import 'pannellum/build/pannellum.css'
 import EditorNavigation from './editor/EditorNavigation'
+import { describeRoute, track } from '../utils/analytics'
 
 interface PanoramaViewerProps {
   imageUrl: string
@@ -10,15 +12,20 @@ interface PanoramaViewerProps {
   onSelectPanorama: (id: string) => void
   onClose: () => void
   projectId: string
+  /** Верхняя панель вместо навигации редактора (например, в режиме просмотра для пользователей). */
+  navigation?: ReactNode
 }
 
-export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, onSelectPanorama, onClose, projectId }: PanoramaViewerProps) {
+export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, onSelectPanorama, onClose, projectId, navigation }: PanoramaViewerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<PannellumViewer | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
   const [hfov, setHfov] = useState(100)
+  const trackedRef = useRef({ projectId, title })
+
+  useEffect(() => { trackedRef.current = { projectId, title } }, [projectId, title])
 
   useEffect(() => {
     const dialog = dialogRef.current!
@@ -35,7 +42,13 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
     let cancelled = false
     let viewer: PannellumViewer | undefined
     let observer: ResizeObserver | undefined
-    const onLoad = () => { if (!cancelled) setReady(true) }
+    const onLoad = () => {
+      if (cancelled) return
+      setReady(true)
+      // Считаем только панорамы, которые действительно открылись.
+      const page = describeRoute(window.location.pathname, window.location.search)?.page ?? 'viewer'
+      track({ type: 'panorama', page, projectId: trackedRef.current.projectId, mode: '3d', source: 'in-app', target: trackedRef.current.title })
+    }
     const onError = () => {
       if (!cancelled) setError('Не удалось открыть панораму. Проверьте изображение и поддержку WebGL в браузере.')
     }
@@ -82,7 +95,7 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
     }
   }, [imageUrl])
 
-  const buttonClass = 'rounded-lg border border-line bg-white px-4 py-2 text-sm text-body transition enabled:hover:bg-brand-soft enabled:hover:text-brand disabled:opacity-40'
+  const buttonClass = 'rounded-lg border border-line bg-surface px-4 py-2 text-sm text-body transition enabled:hover:bg-brand-soft enabled:hover:text-brand disabled:opacity-40'
 
   function changeZoom(delta: number) {
     const viewer = viewerRef.current
@@ -101,8 +114,8 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
       onCancel={(event) => { event.preventDefault(); onClose() }}
       className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-page p-0 text-body">
       <div className="flex h-full flex-col">
-        <EditorNavigation projectId={projectId} mode="3d" can3D onModeChange={onClose} onBack={onClose} />
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-4 py-3">
+        {navigation ?? <EditorNavigation projectId={projectId} mode="3d" can3D onModeChange={onClose} onBack={onClose} />}
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3">
           <div className="min-w-0">
             <p className="text-xs font-medium text-brand">3D · Панорама 360°</p>
             <h2 id="panorama-title" className="break-words font-semibold text-ink">{title}</h2>
@@ -110,14 +123,14 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
           <div className="flex flex-wrap items-center gap-3">
             {panoramas.length > 1 && (
               <select aria-label="Панорама точки" value={pointId} onChange={(event) => onSelectPanorama(event.target.value)}
-                className="max-w-56 rounded-lg border border-line bg-white px-3 py-2 text-sm">
+                className="max-w-56 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
                 {panoramas.map((point) => <option key={point.id} value={point.id}>{point.title}</option>)}
               </select>
             )}
           </div>
         </header>
 
-        <div className="relative min-h-0 flex-1 bg-ink">
+        <div className="relative min-h-0 flex-1 bg-black">
           <div ref={containerRef} aria-label={`Панорама 360°: ${title}`} role="application"
             data-viewer-status={error ? 'error' : ready ? 'ready' : 'loading'} className="h-full w-full" />
           {error ? (
@@ -129,7 +142,7 @@ export default function PanoramaViewer({ imageUrl, title, pointId, panoramas, on
           )}
         </div>
 
-        <footer className="flex shrink-0 flex-wrap items-center justify-center gap-3 border-t border-line bg-white p-3">
+        <footer className="flex shrink-0 flex-wrap items-center justify-center gap-3 border-t border-line bg-surface p-3">
           <button type="button" aria-label="Уменьшить масштаб панорамы" disabled={!ready || !!error}
             onClick={() => changeZoom(10)} className={buttonClass}>−</button>
           <output aria-label="Масштаб панорамы" data-hfov={hfov} className="min-w-16 text-center text-sm">{Math.round(10000 / hfov)}%</output>

@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { createWorkspace, getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
+import { getWorkspaces, saveWorkspaces } from '../utils/workspaceStorage';
 import { getFloors } from '../utils/floorStorage';
 import ProjectCard from "../components/ProjectCard";
 import { useConfirmation } from '../contexts/useConfirmation';
+import { countBy, filterEvents, useAnalyticsEvents } from '../utils/analytics';
 import type { Project } from "../types/project";
 import {
   createProject,
@@ -13,19 +14,31 @@ import {
 
 function ProjectsPage() {
   const confirm = useConfirmation();
-  const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<Project[]>(() => getProjects());
   const [workspaces, setWorkspaces] = useState(() => getWorkspaces(projects, false));
-  const [kind, setKind] = useState<'map' | 'workspace'>(() => searchParams.get('create') === 'workspace' ? 'workspace' : 'map');
   const [filter, setFilter] = useState<'all' | 'map' | 'workspace'>('all');
-  const [isFormOpen, setIsFormOpen] = useState(() => searchParams.get('create') === 'workspace');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  // Пункт меню «Создать проект» ведёт на /?create=project — форма открывается так же, как по кнопке в шапке.
+  const formOpen = isFormOpen || searchParams.has("create");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
+  const events = useAnalyticsEvents();
+  const viewStats = useMemo(() => {
+    const views = filterEvents(events, { days: 30 }).filter((event) => event.type === "view" && event.projectId);
+    return { total: views.length, byProject: new Map(countBy(views, (event) => event.projectId)) };
+  }, [events]);
+
+  const closeForm = useCallback(() => {
+    setIsFormOpen(false);
+    if (searchParams.has("create")) setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     function handleToggleForm() {
-      setIsFormOpen((open) => !open);
+      if (formOpen) closeForm();
+      else setIsFormOpen(true);
       setError("");
     }
 
@@ -37,7 +50,7 @@ function ProjectsPage() {
         handleToggleForm,
       );
     };
-  }, []);
+  }, [formOpen, closeForm]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +77,7 @@ function ProjectsPage() {
       setName("");
       setDescription("");
       setError("");
-      setIsFormOpen(false);
+      closeForm();
     } catch {
       setError(
         "Не удалось сохранить проект. Проверь доступное место в браузере.",
@@ -119,7 +132,7 @@ function ProjectsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-4 rounded-xl border border-line bg-white px-5 py-4">
+              <div className="flex items-center gap-4 rounded-xl border border-line bg-surface px-5 py-4">
                 <div>
                   <p className="text-2xl font-bold leading-6 text-body">
                     {projects.length + workspaces.workspaces.length}
@@ -135,7 +148,7 @@ function ProjectsPage() {
         <nav aria-label="Фильтр проектов" className="mb-6 flex flex-wrap gap-2">
           {([{ value: 'all', label: 'Все' }, { value: 'map', label: 'Карты' }, { value: 'workspace', label: 'Workspace' }] as const).map((item) =>
             <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => setFilter(item.value)}
-              className={`rounded-lg border px-4 py-2 text-sm ${filter === item.value ? 'border-brand-border bg-brand-soft text-brand' : 'border-line bg-white hover:bg-surface-muted'}`}>{item.label}</button>)}
+              className={`rounded-lg border px-4 py-2 text-sm ${filter === item.value ? 'border-brand-border bg-brand-soft text-brand' : 'border-line bg-surface hover:bg-surface-muted'}`}>{item.label}</button>)}
         </nav>
         {error && (
           <div
@@ -147,8 +160,8 @@ function ProjectsPage() {
           </div>
         )}
 
-        {isFormOpen && (
-          <section className="mb-9 overflow-hidden rounded-xl border border-line bg-white">
+        {formOpen && (
+          <section className="mb-9 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-5 sm:px-7">
               <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand">
                 Новый объект
@@ -180,7 +193,7 @@ function ProjectsPage() {
                     maxLength={120}
                     required
                     autoFocus
-                    className="w-full rounded-lg border border-line-strong bg-white px-4 py-3 text-sm text-body outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-brand-soft"
+                    className="w-full rounded-lg border border-line-strong bg-surface px-4 py-3 text-sm text-body outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-brand-soft"
                   />
                 </label>
 
@@ -197,7 +210,7 @@ function ProjectsPage() {
                     onChange={(event) => setDescription(event.target.value)}
                     placeholder="Кратко опиши пространство"
                     maxLength={1000}
-                    className="w-full rounded-lg border border-line-strong bg-white px-4 py-3 text-sm text-body outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-brand-soft"
+                    className="w-full rounded-lg border border-line-strong bg-surface px-4 py-3 text-sm text-body outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-brand-soft"
                   />
                 </label>
               </div>
@@ -206,7 +219,7 @@ function ProjectsPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsFormOpen(false);
+                    closeForm();
                     setName("");
                     setDescription("");
                     setError("");
@@ -227,7 +240,7 @@ function ProjectsPage() {
         )}
 
         {projects.length === 0 && workspaces.workspaces.length === 0 ? (
-          <section className="rounded-xl border border-dashed border-line-strong bg-white px-6 py-16 text-center sm:py-20">
+          <section className="rounded-xl border border-dashed border-line-strong bg-surface px-6 py-16 text-center sm:py-20">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-brand-soft text-brand">
               <svg
                 viewBox="0 0 24 24"
@@ -250,7 +263,7 @@ function ProjectsPage() {
               которым хочешь прикрепить панорамы.
             </p>
 
-            {!isFormOpen && (
+            {!formOpen && (
               <button
                 type="button"
                 onClick={() => {
@@ -282,6 +295,7 @@ function ProjectsPage() {
                   buildingsCount={0}
                   floorsCount={getFloors(project).length}
                   drawings={project.drawings}
+                  stats={{ views: viewStats.byProject.get(project.id) ?? 0, share: viewStats.total ? (viewStats.byProject.get(project.id) ?? 0) / viewStats.total : 0 }}
                   onDelete={() => handleDelete(project.id)}
                 />
               ))}

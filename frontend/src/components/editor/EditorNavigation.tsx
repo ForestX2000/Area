@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { useProjects } from '../../utils/useProjects'
 import { getWorkspaces } from '../../utils/workspaceStorage'
 import { getPoints } from '../../utils/pointStorage'
-import { getPanorama } from '../../utils/mapStorage'
 import FloorPicker from './FloorPicker'
 import { floorStorageId, floorUrl, getFloor } from '../../utils/floorStorage'
+import { api } from '../../utils/api'
 
 export default function EditorNavigation({ projectId, mode = '2d', can3D, onModeChange, onBack }: {
   projectId: string; mode?: '2d' | '3d'; can3D?: boolean; onModeChange?: () => void; onBack?: () => void
@@ -25,12 +25,12 @@ export default function EditorNavigation({ projectId, mode = '2d', can3D, onMode
   useEffect(() => {
     let cancelled = false
     if (can3D !== undefined) return
-    void Promise.all(getPoints(storageId).map((point) => getPanorama(storageId, point.id)))
+    void Promise.all(getPoints(storageId).map((point) => api.fetchPanorama(storageId, point.id)))
       .then((files) => { if (!cancelled) setHasPanorama(files.some(Boolean)) })
       .catch(() => { if (!cancelled) setHasPanorama(false) })
     return () => { cancelled = true }
   }, [storageId, can3D])
-  return <nav aria-label="Навигация редактора" className="flex w-full flex-wrap items-center justify-center gap-3 border-b border-line bg-white px-3 py-3">
+  return <nav aria-label="Навигация редактора" className="flex w-full flex-wrap items-center justify-center gap-3 border-b border-line bg-surface px-3 py-3">
     {onBack ? <button type="button" onClick={onBack} aria-label="К 2D-карте" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">←</button>
       : <Link to={`/projects/${projectId}`} aria-label="Назад к проекту" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-brand-soft">←</Link>}
     <span className="max-w-60 truncate text-sm font-semibold text-ink" title={project?.name}>{project?.name ?? 'Проект'}</span>
@@ -43,7 +43,7 @@ export default function EditorNavigation({ projectId, mode = '2d', can3D, onMode
         title={(can3D ?? hasPanorama) ? 'Переключить 2D / 3D' : 'Добавьте панораму на 2D-карте'}
         onClick={() => onModeChange ? onModeChange() : navigate(floorPath(`/projects/${projectId}/map?mode=${mode === '2d' ? '3d' : '2d'}`))}
         className={`relative h-6 w-11 rounded-full transition disabled:opacity-40 ${mode === '3d' ? 'bg-brand' : 'bg-line-strong'}`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${mode === '3d' ? 'left-[22px]' : 'left-0.5'}`} />
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition ${mode === '3d' ? 'left-[22px]' : 'left-0.5'}`} />
       </button><span>3D</span></div>
     {location.state?.floorWarning && <p role="alert" className="w-full text-center text-xs text-brand-hover">{location.state.floorWarning}</p>}
   </nav>

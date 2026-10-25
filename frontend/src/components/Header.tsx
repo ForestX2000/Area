@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/useAuth";
+import { isAdmin } from "../utils/auth";
+import Avatar from "./Avatar";
 import BrandLogo from "./BrandLogo";
+import ThemeToggle from "./ThemeToggle";
 
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -11,32 +14,36 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
       : "text-body hover:bg-page hover:text-brand"
   }`;
 
+const ADMIN_LINKS = [
+  { to: "/", icon: "▦", label: "Проекты", end: true },
+  { to: "/workspace", icon: "▧", label: "2D Workspace" },
+  { to: "/stats", icon: "◔", label: "Статистика" },
+  // Ссылка с параметром открывает форму на странице проектов; подсвечивать её как текущую не нужно.
+  { to: "/?create=project", icon: "＋", label: "Создать проект", plain: true },
+  { to: "/profile", icon: "◉", label: "Профиль" },
+];
+
+const USER_LINKS = [
+  { to: "/", icon: "▦", label: "Объекты", end: true },
+  { to: "/profile", icon: "◉", label: "Профиль" },
+];
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const admin = isAdmin(user);
 
   function handleLogout() {
     signOut();
     setMenuOpen(false);
     navigate("/login", { replace: true });
   }
-  const location = useLocation();
-  const isProjectsPage = location.pathname === "/";
-
-  const pageTitle = isProjectsPage
-    ? "Мои проекты"
-    : location.pathname.startsWith("/workspace")
-      ? "2D Workspace"
-    : location.pathname === "/projects/new"
-      ? "Создание проекта"
-      : location.pathname.includes("/map")
-        ? "Карта пространства"
-        : location.pathname.includes("/editor") ? "Редактор чертежа" : "Проект";
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-line bg-white">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface">
         <div className="flex min-h-[72px] items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
@@ -72,14 +79,8 @@ export default function Header() {
             <BrandLogo compact />
           </Link>
 
-          <div className="ml-auto flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-xs text-muted">Рабочая область</p>
-              <p className="text-sm font-medium text-body">{pageTitle}</p>
-            </div>
-
-            {isProjectsPage && (
-              <>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            {admin && location.pathname === "/" && (
               <button
                 type="button"
                 aria-label="Создать проект"
@@ -93,17 +94,25 @@ export default function Header() {
                 <span className="text-lg leading-none">+</span>
                 <span className="hidden sm:inline">Создать проект</span>
               </button>
-                {user && (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    aria-label="Выйти из аккаунта"
-                    className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-body transition hover:border-brand-border hover:bg-brand-soft hover:text-brand"
-                  >
-                    <span className="hidden sm:inline">{user.name} · </span>
-                    Выйти
-                  </button>
-                )}
+            )}
+
+            <ThemeToggle />
+
+            {user && (
+              <>
+                <Link to="/profile" aria-label={`Профиль: ${user.name}`}
+                  className="flex items-center gap-2 rounded-xl p-1 pr-1 transition hover:bg-brand-soft sm:pr-3">
+                  <Avatar user={user} size="sm" />
+                  <span className="hidden max-w-36 truncate text-sm font-medium text-body sm:inline">{user.name}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  aria-label="Выйти из аккаунта"
+                  className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-body transition hover:border-brand-border hover:bg-brand-soft hover:text-brand"
+                >
+                  Выйти
+                </button>
               </>
             )}
           </div>
@@ -122,7 +131,7 @@ export default function Header() {
           <nav
             id="main-navigation"
             aria-label="Главная навигация"
-            className="fixed inset-y-0 left-0 z-50 flex w-[min(300px,85vw)] flex-col border-r border-line bg-white p-5 shadow-xl"
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(300px,85vw)] flex-col border-r border-line bg-surface p-5 shadow-xl"
           >
             <div className="mb-6 flex items-center justify-between border-b border-line pb-5">
               <div>
@@ -142,33 +151,13 @@ export default function Header() {
             </div>
 
             <div className="space-y-2">
-              <NavLink
-                to="/"
-                end
-                onClick={() => setMenuOpen(false)}
-                className={navClass}
-              >
-                <span aria-hidden="true">▦</span>
-                Мои проекты
-              </NavLink>
-
-              <NavLink
-                to="/workspace"
-                onClick={() => setMenuOpen(false)}
-                className={navClass}
-              >
-                <span aria-hidden="true">▧</span>
-                2D Workspace
-              </NavLink>
-
-              <NavLink
-                to="/projects/new"
-                onClick={() => setMenuOpen(false)}
-                className={navClass}
-              >
-                <span aria-hidden="true">＋</span>
-                Создать проект
-              </NavLink>
+              {(admin ? ADMIN_LINKS : USER_LINKS).map((link) => (
+                <NavLink key={link.to} to={link.to} end={link.end} onClick={() => setMenuOpen(false)}
+                  className={"plain" in link ? navClass({ isActive: false }) : navClass}>
+                  <span aria-hidden="true">{link.icon}</span>
+                  {link.label}
+                </NavLink>
+              ))}
             </div>
           </nav>
         </>

@@ -65,7 +65,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(async (image) => {
     const blob = await (await fetch(`data:image/png;base64,${image}`)).blob()
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('space-map-db', 1)
+      const request = indexedDB.open('space-map-db')
       request.onupgradeneeded = () => request.result.createObjectStore('map-images')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -117,7 +117,7 @@ test('plan, point and panorama deletion use in-page confirmation and preserve da
   await expect(plan(page)).not.toBeVisible()
   expect(await points()).toEqual([])
   const keys = await page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db', 1); request.onsuccess = () => resolve(request.result) })
+    const db = await new Promise<IDBDatabase>((resolve) => { const request = indexedDB.open('space-map-db'); request.onsuccess = () => resolve(request.result) })
     const keys = await new Promise<IDBValidKey[]>((resolve) => { const request = db.transaction('map-images').objectStore('map-images').getAllKeys(); request.onsuccess = () => resolve(request.result) })
     db.close(); return keys
   })

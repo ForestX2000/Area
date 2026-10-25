@@ -539,7 +539,7 @@ export default function CanvasEditor({ objects, onObjectsChange, selectedIds, on
             fill="var(--ttk-red-hover)" stroke="white" strokeWidth={1.5 / zoom} pointerEvents="none" />}
         </g>
       </svg>
-      <div className="absolute bottom-3 left-3 pointer-events-none rounded border border-line bg-white/90 px-2 py-1 text-xs text-muted">
+      <div className="absolute bottom-3 left-3 pointer-events-none rounded border border-line bg-surface/90 px-2 py-1 text-xs text-muted">
         {tool === 'polygon' ? `Многоугольник: ${polygonPoints.length} вершин · клик по первой точке — завершить · правая кнопка / Escape — отменить` : `Колесико / два пальца — перемещение · Ctrl + колесо — масштаб · ячейка ${gridSize} м`}
       </div>
     </div>

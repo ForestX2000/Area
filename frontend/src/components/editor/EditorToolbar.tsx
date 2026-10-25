@@ -53,8 +53,9 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         <button type="button" data-tutorial="undo" disabled={!props.canUndo} onClick={props.onUndo} className={buttonClass}>Отменить · Ctrl + Z</button>
         <button type="button" disabled={!props.canRedo} onClick={props.onRedo} className={buttonClass}>Вернуть · Ctrl + Y</button>
       </div>
-      <p className="mt-3 hidden text-xs leading-5 text-muted lg:block">Многоугольник — кликами по точкам, затем по первой. Shift + клик — несколько объектов. Ctrl + A — выделить всё. ПКМ — меню действий.</p>
-      <p className="mt-3 text-xs leading-5 text-muted lg:hidden">Выберите фигуру и протяните пальцем по холсту. Удерживайте объект, чтобы открыть меню действий. Для многоугольника касайтесь вершин по очереди. Кнопка «Действия» — копирование и выбор нескольких объектов.</p>
+      <p className="mt-3 text-xs leading-5 text-muted">Чтобы создать многоугольник, укажите несколько точек и нажмите на первую для завершения создания.</p>
+      <p className="hidden text-xs leading-5 text-muted lg:block">Для выбора нескольких объектов используйте Shift + клик. Ctrl + A выделяет все объекты. Правая кнопка мыши открывает меню действий.</p>
+      <p className="text-xs leading-5 text-muted lg:hidden">Для рисования протяните пальцем по холсту. Удержание объекта открывает меню действий.</p>
     </section>
     <section aria-label="Метки" className="border-t border-line pt-3">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Метки</h2>

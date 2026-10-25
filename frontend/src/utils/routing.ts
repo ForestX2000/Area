@@ -190,7 +190,7 @@ export function findRoute(floors: ProjectFloor[], request: Required<RouteRequest
   const start = endpointPoint(floors, request.from), end = endpointPoint(floors, request.to)
   if (!start || !end) return { error: 'Начало или конец маршрута удалены с чертежа.' }
   const floorIds = floorRoute(floors, request.from.floorId, request.to.floorId)
-  if (!floorIds) return { error: 'Этажи не связаны лестницей. Добавь лестницу и выбери, на какой этаж она ведёт.' }
+  if (!floorIds) return { error: 'Этажи не связаны. Добавьте лестницу и укажите целевой этаж.' }
   const legs: RouteLeg[] = []
   let position = start
   for (let index = 0; index < floorIds.length; index++) {
@@ -209,7 +209,7 @@ export function findRoute(floors: ProjectFloor[], request: Required<RouteRequest
       entry = arrival ? objectCenter(arrival) : target
     }
     const points = findPath((floor.drawings ?? []), position, target)
-    if (!points) return { error: `Не удалось найти проход на этаже ${floor.name}. Проверь стены или отметь коридоры как «Проходимая зона».` }
+    if (!points) return { error: `Не удалось найти проход на этаже ${floor.name}. Проверьте стены и настройку «Проходимая зона» у коридоров.` }
     legs.push({ floorId: floor.id, points, length: routeLength(points) / PIXELS_PER_METRE, exitStairsId: exit?.id })
     if (entry) position = entry
   }

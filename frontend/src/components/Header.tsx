@@ -16,7 +16,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 
 const ADMIN_LINKS = [
   { to: "/", icon: "▦", label: "Проекты", end: true },
-  { to: "/workspace", icon: "▧", label: "2D Workspace" },
+  { to: "/workspace", icon: "▧", label: "Workspace" },
   { to: "/stats", icon: "◔", label: "Статистика" },
   // Ссылка с параметром открывает форму на странице проектов; подсвечивать её как текущую не нужно.
   { to: "/?create=project", icon: "＋", label: "Создать карту", plain: true },

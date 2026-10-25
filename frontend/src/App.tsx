@@ -14,6 +14,7 @@ import StatsPage from "./pages/StatsPage";
 import SharedProjectPage from "./pages/SharedProjectPage";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import { useAuth } from "./contexts/useAuth";
+import { AuthProvider } from "./contexts/AuthContext";
 import { isAdmin } from "./utils/auth";
 
 
@@ -46,15 +47,23 @@ function HomePage() {
   return isAdmin(user) ? <ProjectsPage /> : <ObjectsPage />;
 }
 
+function AccountRoutes() {
+  return (
+    <AuthProvider>
+      <AnalyticsTracker />
+      <Outlet />
+    </AuthProvider>
+  );
+}
+
 export default function App() {
   return (
-    <>
-      <AnalyticsTracker />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        {/* Публичная ссылка: просмотр без входа. */}
-        <Route path="/share/:shareId" element={<SharedProjectPage />} />
+    <Routes>
+      {/* Просмотр по ссылке не зависит от сессии и хранилища аккаунтов. */}
+      <Route path="/share/:shareId" element={<SharedProjectPage />} />
 
+      <Route element={<AccountRoutes />}>
+        <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
@@ -78,7 +87,7 @@ export default function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+      </Route>
+    </Routes>
   );
 }

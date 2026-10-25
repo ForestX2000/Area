@@ -50,7 +50,7 @@ export default function WorkspacePage() {
   }
 
   if (!active) return <section className="rounded-2xl border border-line bg-surface p-8 text-center">
-    <h1 className="text-2xl font-bold text-ink">Пока нет Workspace</h1>
+    <h1 className="text-2xl font-bold text-ink">Нет Workspace</h1>
     <p className="mt-3 text-muted">Сохранённые Workspace отображаются в общем списке «Мои проекты».</p>
     <Link to="/" className="mt-5 inline-flex rounded-lg bg-brand px-4 py-2 text-white">К моим проектам</Link>
   </section>
@@ -60,8 +60,7 @@ export default function WorkspacePage() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <Link to="/" className="text-sm text-muted hover:text-brand">← Все проекты</Link>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink">2D Workspace</h1>
-          <p className="mt-2 text-sm text-muted">Размещайте карты на общем холсте и объединяйте их в контейнеры.</p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink">Workspace</h1>
         </div>
       </div>
       <div className="mb-4 flex flex-wrap items-end gap-3">

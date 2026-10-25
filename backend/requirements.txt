@@ -1,16 +1,11 @@
-# Список зависимостей, необходимых для работы бекенда
 fastapi
 uvicorn[standard]
 pytest
 httpx
+python-dotenv
 sqlalchemy
-<<<<<<< Updated upstream
 psycopg[binary]
 alembic
-python-dotenvwinget install PostgreSQL.PostgreSQL.18 --interactive
-=======
 python-multipart
-# Склейка панорамы 360° из нескольких фотографий
 numpy
 opencv-python-headless
->>>>>>> Stashed changes

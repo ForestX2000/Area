@@ -1,0 +1,60 @@
+import { expect, test } from '@playwright/test'
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('space-map-demo-user', JSON.stringify({ id: 'confirm', name: 'Тест', email: 'test@example.com', role: 'admin' }))
+    if (!localStorage.getItem('space-map-projects')) {
+      localStorage.setItem('space-map-projects', JSON.stringify([{ id: 'office', name: 'Главный офис', description: '', createdAt: '2026-10-24' }]))
+      localStorage.setItem('space-map-workspaces', JSON.stringify({ version: 1, activeId: 'workspace', workspaces: [{ id: 'workspace', name: 'Все здания', nodes: [], groups: [] }] }))
+    }
+  })
+  page.on('dialog', () => { throw new Error('Deletion must use an in-page confirmation') })
+  await page.goto('/')
+})
+
+test('project confirmation supports cancellation, focus trapping and explicit deletion', async ({ page }) => {
+  const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Главный офис', exact: true }) })
+  const trigger = card.getByRole('button', { name: 'Удалить', exact: true })
+  const dialog = page.getByRole('dialog', { name: 'Удалить проект?', exact: true })
+  await trigger.click()
+  await expect(dialog).toContainText('Главный офис')
+  const cancel = dialog.getByRole('button', { name: 'Отмена', exact: true })
+  const remove = dialog.getByRole('button', { name: 'Удалить', exact: true })
+  await expect(cancel).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(remove).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(cancel).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+  await expect(trigger).toBeFocused()
+  await trigger.click()
+  await cancel.press('Enter')
+  await expect(card).toBeVisible()
+  await trigger.click()
+  await page.mouse.click(5, 5)
+  await expect(dialog).not.toBeVisible()
+  await expect(card).toBeVisible()
+  await trigger.click()
+  await remove.click()
+  await expect(card).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('space-map-projects')!))).toEqual([])
+})
+
+test('Workspace card confirmation fits a narrow screen and preserves maps', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Все здания', exact: true }) })
+  await card.getByRole('button', { name: 'Удалить', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Удалить Workspace?', exact: true })
+  await expect(dialog).toContainText('Карты останутся в проектах')
+  const bounds = (await dialog.boundingBox())!
+  expect(bounds.x).toBeGreaterThanOrEqual(0)
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('delete-confirmation-mobile.png') })
+  await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(card).toBeVisible()
+  await card.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect(card).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Главный офис', exact: true })).toBeVisible()
+})

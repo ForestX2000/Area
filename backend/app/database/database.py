@@ -8,13 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 load_dotenv()
 
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError(
-        "Переменная DATABASE_URL не найдена. "
-        "Проверь файл .env в папке backend."
-    )
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/area.db")
 
 
 engine = create_engine(

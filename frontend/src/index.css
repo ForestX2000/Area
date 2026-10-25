@@ -1,0 +1,90 @@
+
+@import "tailwindcss";
+@import "./App.css" layer(components);
+
+:root {
+  font-family: Inter, system-ui, Arial, sans-serif;
+  color: var(--ttk-graphite);
+  background: var(--ttk-background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Primary colours come from the official SVG at company.ttk.ru/logo/. */
+  --ttk-red: #DD2538;
+  --ttk-red-hover: #BE1F30;
+  --ttk-red-light: #FFF1F3;
+  --ttk-red-tint: #FDE2E7;
+  --ttk-red-border: #F4B8C1;
+  --ttk-red-strong: #9E1B2B;
+
+  --ttk-graphite: #1A1B1B;
+  --ttk-body: #4A4A4A;
+  --ttk-white: #FFFFFF;
+
+  --ttk-background: #F5F5F5;
+  --ttk-surface-muted: #FAFAFA;
+  --ttk-surface-subtle: #F0F0F0;
+  --ttk-border: #E5E5E5;
+  --ttk-border-soft: #EEEEEE;
+  --ttk-border-strong: #D4D4D4;
+  --ttk-muted: #737373;
+  --ttk-success: #216E4E;
+  --ttk-drawing-fill: rgba(221, 37, 56, 0.04);
+  --ttk-grid-minor: #E8E8E8;
+  --ttk-grid-major: #D4D4D4;
+}
+
+@theme inline {
+  --color-brand: var(--ttk-red);
+  --color-brand-hover: var(--ttk-red-hover);
+  --color-brand-soft: var(--ttk-red-light);
+  --color-brand-tint: var(--ttk-red-tint);
+  --color-brand-border: var(--ttk-red-border);
+  --color-brand-strong: var(--ttk-red-strong);
+  --color-ink: var(--ttk-graphite);
+  --color-body: var(--ttk-body);
+  --color-muted: var(--ttk-muted);
+  --color-surface: var(--ttk-white);
+  --color-page: var(--ttk-background);
+  --color-surface-muted: var(--ttk-surface-muted);
+  --color-surface-subtle: var(--ttk-surface-subtle);
+  --color-line: var(--ttk-border);
+  --color-line-soft: var(--ttk-border-soft);
+  --color-line-strong: var(--ttk-border-strong);
+  --color-success: var(--ttk-success);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--ttk-background);
+  color: var(--ttk-graphite);
+}
+
+button {
+  font: inherit;
+}
+
+input[type='checkbox'],
+input[type='range'] {
+  accent-color: var(--ttk-red);
+}
+
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--ttk-red);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--ttk-red-tint);
+  color: var(--ttk-graphite);
+}
+
+
